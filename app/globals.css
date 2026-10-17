@@ -9022,3 +9022,232 @@ a.summary-debt-card:hover { background: #fffaf7; }
     min-height: 60px;
   }
 }
+
+/* =========================================================
+   HOME — AJUSTE FINAL MOBILE
+   Hero + cards quadrados
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  /* TOPO */
+  .hero {
+    height: 250px;
+  }
+
+  .hero-content {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 0 10px;
+  }
+
+  .mascot-wrapper {
+    flex: 0 0 auto;
+    margin-right: -8px;
+    margin-bottom: -4px;
+  }
+
+  .mascot {
+    width: 165px;
+    height: auto;
+  }
+
+  .brand {
+    min-width: 0;
+    padding-bottom: 35px;
+  }
+
+  .brand h1 {
+    font-size: 40px;
+    letter-spacing: -2.5px;
+  }
+
+  .brand p {
+    font-size: 7.5px;
+    letter-spacing: 1.5px;
+  }
+
+  .brand-line span:not(.small-heart) {
+    width: 55px;
+  }
+
+  /* CARDS PRINCIPAIS */
+  .menu-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .menu-card {
+    width: 100%;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+    padding: 16px 34px 16px 14px;
+    border-radius: 26px;
+  }
+
+  .menu-image {
+    width: min(42%, 105px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+  }
+
+  .new-sale-icon {
+    width: min(42%, 92px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    font-size: 62px;
+  }
+
+  .menu-card h2,
+  .new-sale h2 {
+    margin-top: 8px;
+    font-size: 24px;
+    line-height: 1.05;
+    text-align: center;
+  }
+
+  .arrow {
+    right: 8px;
+    width: 28px;
+    font-size: 46px;
+  }
+}
+
+
+@media (max-width: 430px) {
+
+  .hero {
+    height: 230px;
+  }
+
+  .mascot {
+    width: 142px;
+  }
+
+  .mascot-wrapper {
+    margin-right: -5px;
+  }
+
+  .brand {
+    padding-bottom: 31px;
+  }
+
+  .brand h1 {
+    font-size: 34px;
+    letter-spacing: -2px;
+  }
+
+  .brand p {
+    font-size: 6.5px;
+    letter-spacing: 1px;
+  }
+
+  .brand-heart {
+    top: -26px;
+    font-size: 36px;
+  }
+
+  .brand-line span:not(.small-heart) {
+    width: 44px;
+  }
+
+  .menu-grid {
+    gap: 10px;
+  }
+
+  .menu-card {
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+    padding: 12px 30px 12px 12px;
+    border-radius: 24px;
+  }
+
+  .menu-image {
+    width: min(44%, 88px);
+    height: auto;
+  }
+
+  .new-sale-icon {
+    width: min(44%, 82px);
+    height: auto;
+    font-size: 56px;
+  }
+
+  .menu-card h2,
+  .new-sale h2 {
+    font-size: 21px;
+  }
+
+  .arrow {
+    right: 5px;
+    width: 25px;
+    font-size: 42px;
+  }
+}
+
+/* =========================================================
+   HOME — CENTRALIZAÇÃO INTERNA DOS CARDS
+   ========================================================= */
+
+@media (max-width: 700px) {
+  .menu-card {
+    padding: 16px;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .menu-image {
+    display: block;
+    margin: 0 auto;
+  }
+
+  .new-sale-icon {
+    margin: 0 auto;
+  }
+
+  .menu-card h2,
+  .new-sale h2 {
+    width: 100%;
+    margin: 10px 0 0;
+    text-align: center;
+  }
+
+  .arrow {
+    right: 8px;
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .menu-card {
+    padding: 14px;
+  }
+
+  .menu-image {
+    width: 86px;
+    height: 86px;
+  }
+
+  .new-sale-icon {
+    width: 82px;
+    height: 82px;
+  }
+
+  .menu-card h2,
+  .new-sale h2 {
+    font-size: 21px;
+    line-height: 1.05;
+  }
+
+  .arrow {
+    right: 6px;
+    font-size: 40px;
+  }
+}
