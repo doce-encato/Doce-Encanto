@@ -9251,3 +9251,74 @@ a.summary-debt-card:hover { background: #fffaf7; }
     font-size: 40px;
   }
 }
+
+/* =========================================================
+   COMPRA DETALHADA — MODAL NOVO PRODUTO MOBILE
+   ========================================================= */
+
+.inventory-modal .form-row {
+  align-items: end;
+}
+
+.inventory-modal .form-group {
+  min-width: 0;
+}
+
+.inventory-modal .form-group input,
+.inventory-modal .form-group select {
+  width: 100%;
+  min-height: 48px;
+}
+
+.inventory-modal .quantity-unit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px;
+  gap: 8px;
+  align-items: center;
+}
+
+.inventory-modal .quantity-unit-row input,
+.inventory-modal .quantity-unit-row select {
+  height: 48px;
+  min-height: 48px;
+}
+
+@media (max-width: 600px) {
+  .inventory-modal .form-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .inventory-modal .quantity-unit-row {
+    grid-template-columns: minmax(0, 1fr) 82px;
+  }
+
+  .inventory-modal .form-group input,
+  .inventory-modal .form-group select,
+  .inventory-modal .quantity-unit-row input,
+  .inventory-modal .quantity-unit-row select {
+    min-height: 50px;
+    height: 50px;
+  }
+}
+
+/* CORREÇÃO FINAL DOS SELECTS NO MOBILE */
+
+.inventory-modal .form-group select,
+.inventory-modal .quantity-unit-row select {
+  height: 50px;
+  min-height: 50px;
+  padding: 0 16px;
+  line-height: 50px;
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .inventory-modal .form-group select,
+  .inventory-modal .quantity-unit-row select {
+    height: 50px;
+    min-height: 50px;
+    padding: 0 14px;
+    line-height: normal;
+  }
+}

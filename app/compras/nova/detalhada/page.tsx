@@ -396,14 +396,15 @@ const valorFinalProduto =
           )
       )
     );
+if (itemCriado.unit === "g") {
+  setUnidadeCompra("g");
+} else if (itemCriado.unit === "ml") {
+  setUnidadeCompra("ml");
+} else {
+  setUnidadeCompra("unidade");
+}
 
-    setProdutoSelecionadoId(
-      itemCriado.id
-    );
-
-    setBuscaProduto(
-      itemCriado.name
-    );
+setNovaUnidadeMinimo(itemCriado.unit);
 
     setMostrarNovoProduto(false);
 
@@ -1723,14 +1724,15 @@ onClick={() => {
       Tipo de medida
     </label>
 
-    <select
-      value={novaUnidade}
-      onChange={(event) =>
-        setNovaUnidade(
-          event.target.value
-        )
-      }
-    >
+<select
+  value={novaUnidade}
+  onChange={(event) => {
+    const valor = event.target.value;
+
+    setNovaUnidade(valor);
+    setNovaUnidadeMinimo(valor);
+  }}
+>
       {tiposMedida.map(
         (item) => (
           <option

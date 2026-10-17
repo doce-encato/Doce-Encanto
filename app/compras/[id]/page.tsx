@@ -1,8 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ExcluirCompraButton from "./ExcluirCompraButton";
-
-export const dynamic = "force-dynamic";
 
 type ItemCompra = {
   id: number;
@@ -24,7 +26,7 @@ type Compra = {
 };
 
 function formatarDinheiro(valor: number) {
-  return Number(valor).toLocaleString("pt-BR", {
+  return Number(valor || 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
@@ -36,37 +38,100 @@ function formatarData(data: string) {
   return `${dia}/${mes}/${ano}`;
 }
 
-export default async function CompraDetalhesPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+export default function CompraDetalhesPage() {
+  const params = useParams<{ id: string }>();
 
-  const { data, error } = await supabase
-    .from("purchases")
-    .select(`
-      id,
-      store_name,
-      purchase_date,
-      type,
-      total,
-      notes,
-      created_at,
-      purchase_items (
-        id,
-        product_name,
-        quantity,
-        unit,
-        total_price
-      )
-    `)
-    .eq("id", id)
-    .single();
+  const [compra, setCompra] =
+    useState<Compra | null>(null);
 
-  if (error || !data) {
-    console.error(error);
+  const [carregando, setCarregando] =
+    useState(true);
 
+  const [erro, setErro] =
+    useState("");
+
+  useEffect(() => {
+    async function carregarCompra() {
+      if (!params.id) return;
+
+      setCarregando(true);
+      setErro("");
+
+      const { data, error } = await supabase
+        .from("purchases")
+        .select(`
+          id,
+          store_name,
+          purchase_date,
+          type,
+          total,
+          notes,
+          created_at,
+          purchase_items (
+            id,
+            product_name,
+            quantity,
+            unit,
+            total_price
+          )
+        `)
+        .eq("id", params.id)
+        .single();
+
+      if (error || !data) {
+        console.error(error);
+
+        setErro(
+          "Não foi possível localizar essa compra."
+        );
+
+        setCompra(null);
+        setCarregando(false);
+
+        return;
+      }
+
+      setCompra(data as Compra);
+      setCarregando(false);
+    }
+
+    carregarCompra();
+  }, [params.id]);
+
+  if (carregando) {
+    return (
+      <main className="compras-page">
+        <div className="page-shell">
+
+          <header className="page-header">
+            <Link
+              href="/compras"
+              className="back-button"
+            >
+              ←
+            </Link>
+
+            <div>
+              <span className="page-kicker">
+                COMPRAS
+              </span>
+
+              <h1>
+                Carregando...
+              </h1>
+
+              <p>
+                Buscando os detalhes da compra.
+              </p>
+            </div>
+          </header>
+
+        </div>
+      </main>
+    );
+  }
+
+  if (!compra || erro) {
     return (
       <main className="compras-page">
         <div className="page-shell">
@@ -89,7 +154,8 @@ export default async function CompraDetalhesPage({
               </h1>
 
               <p>
-                Não foi possível localizar essa compra.
+                {erro ||
+                  "Não foi possível localizar essa compra."}
               </p>
             </div>
           </header>
@@ -99,13 +165,12 @@ export default async function CompraDetalhesPage({
     );
   }
 
-  const compra = data as Compra;
-
   return (
     <main className="compras-page">
       <div className="page-shell">
 
         <header className="page-header">
+
           <Link
             href="/compras"
             className="back-button"
@@ -114,6 +179,7 @@ export default async function CompraDetalhesPage({
           </Link>
 
           <div>
+
             <span className="page-kicker">
               DETALHES DA COMPRA
             </span>
@@ -123,9 +189,13 @@ export default async function CompraDetalhesPage({
             </h1>
 
             <p>
-              {formatarData(compra.purchase_date)}
+              {formatarData(
+                compra.purchase_date
+              )}
             </p>
+
           </div>
+
         </header>
 
 
@@ -134,6 +204,7 @@ export default async function CompraDetalhesPage({
           <div className="detail-top">
 
             <div>
+
               <span>
                 Tipo de compra
               </span>
@@ -143,17 +214,22 @@ export default async function CompraDetalhesPage({
                   ? "Detalhada"
                   : "Rápida"}
               </strong>
+
             </div>
 
 
             <div>
+
               <span>
                 Total gasto
               </span>
 
               <strong className="detail-total">
-                {formatarDinheiro(compra.total)}
+                {formatarDinheiro(
+                  compra.total
+                )}
               </strong>
+
             </div>
 
           </div>
@@ -175,32 +251,41 @@ export default async function CompraDetalhesPage({
 
               ) : (
 
-                compra.purchase_items.map((produto) => (
+                compra.purchase_items.map(
+                  (produto) => (
 
-                  <div
-                    className="detail-product"
-                    key={produto.id}
-                  >
+                    <div
+                      className="detail-product"
+                      key={produto.id}
+                    >
 
-                    <div>
+                      <div>
+
+                        <strong>
+                          {produto.product_name}
+                        </strong>
+
+                        <span>
+                          {Number(
+                            produto.quantity
+                          ).toLocaleString(
+                            "pt-BR"
+                          )}{" "}
+                          {produto.unit}
+                        </span>
+
+                      </div>
+
                       <strong>
-                        {produto.product_name}
+                        {formatarDinheiro(
+                          produto.total_price
+                        )}
                       </strong>
 
-                      <span>
-                        {produto.quantity} {produto.unit}
-                      </span>
                     </div>
 
-                    <strong>
-                      {formatarDinheiro(
-                        produto.total_price
-                      )}
-                    </strong>
-
-                  </div>
-
-                ))
+                  )
+                )
 
               )}
 
@@ -219,6 +304,7 @@ export default async function CompraDetalhesPage({
               </p>
 
               {compra.notes && (
+
                 <div className="purchase-note">
 
                   <span>
@@ -230,17 +316,22 @@ export default async function CompraDetalhesPage({
                   </p>
 
                 </div>
+
               )}
 
             </div>
 
           )}
 
+
           <div className="purchase-delete-area">
-  <ExcluirCompraButton
-    compraId={compra.id}
-  />
-</div>
+
+            <ExcluirCompraButton
+              compraId={compra.id}
+            />
+
+          </div>
+
         </section>
 
       </div>
