@@ -1,69 +1,174 @@
+"use client";
+
 import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+const menuItems = [
+  { title: "Compras", image: "/icons/compras.png", className: "card-pink", href: "/compras" },
+  { title: "Matéria-prima", image: "/icons/estoque.png", className: "card-cream", href: "/estoque" },
+  { title: "Clientes", image: "/icons/clientes.png", className: "card-pink", href: "/clientes" },
+  { title: "Doces", image: "/icons/producao.png", className: "card-pink", href: "/doces" },
+  { title: "Resumo", image: "/icons/resumo.png", className: "card-cream", href: "/resumo" },
+];
+
+function dinheiro(valor: number) {
+  return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function hojeISO() {
+  const hoje = new Date();
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+}
+
+function inicioMesISO() {
+  const hoje = new Date();
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function inicioProximoMesISO() {
+  const hoje = new Date();
+  const proximo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
+  return `${proximo.getFullYear()}-${String(proximo.getMonth() + 1).padStart(2, "0")}-01`;
+}
 
 export default function Home() {
+  const [vendasHoje, setVendasHoje] = useState(0);
+  const [lucroEstimadoMes, setLucroEstimadoMes] = useState(0);
+  const [carregandoResumo, setCarregandoResumo] = useState(true);
+
+  useEffect(() => {
+    async function carregarResumoHome() {
+      setCarregandoResumo(true);
+
+      const hoje = hojeISO();
+      const inicioMes = inicioMesISO();
+      const inicioProximoMes = inicioProximoMesISO();
+
+      const [vendasHojeResp, vendasMesResp, comprasMesResp] = await Promise.all([
+        supabase.from("sales").select("total").eq("sale_date", hoje).neq("payment_status", "canceled"),
+        supabase.from("sales").select("total").gte("sale_date", inicioMes).lt("sale_date", inicioProximoMes).neq("payment_status", "canceled"),
+        supabase.from("purchases").select("total").gte("purchase_date", inicioMes).lt("purchase_date", inicioProximoMes),
+      ]);
+
+      if (vendasHojeResp.error || vendasMesResp.error || comprasMesResp.error) {
+        console.error(vendasHojeResp.error || vendasMesResp.error || comprasMesResp.error);
+        setCarregandoResumo(false);
+        return;
+      }
+
+      const totalHoje = (vendasHojeResp.data ?? []).reduce((soma, venda) => soma + Number(venda.total ?? 0), 0);
+      const totalVendidoMes = (vendasMesResp.data ?? []).reduce((soma, venda) => soma + Number(venda.total ?? 0), 0);
+      const totalComprasMes = (comprasMesResp.data ?? []).reduce((soma, compra) => soma + Number(compra.total ?? 0), 0);
+
+      setVendasHoje(totalHoje);
+      setLucroEstimadoMes(totalVendidoMes - totalComprasMes * 3);
+      setCarregandoResumo(false);
+    }
+
+    carregarResumoHome();
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="app">
+      <section className="hero">
+        <div className="top-actions">
+
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+
+        <div className="hero-content">
+          <div className="mascot-wrapper">
             <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+              src="/mascot/doce-encanto.png"
+              alt="Mascote Doce Encanto"
+              width={320}
+              height={400}
+              className="mascot"
+              priority
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+
+          <div className="brand">
+            <span className="brand-heart">♡</span>
+            <h1>Doce Encanto</h1>
+            <div className="brand-line">
+              <span />
+              <span className="small-heart">♡</span>
+              <span />
+            </div>
+            <p>DOCES QUE FAZEM A VIDA MAIS DOCE</p>
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className="content">
+        <div className="stats">
+          <div className="stat-card stat-pink">
+            <Image
+              src="/icons/vendas_de_hoje.png"
+              alt="Vendas de hoje"
+              width={120}
+              height={120}
+              className="stat-image"
+            />
+            <div>
+              <p>Vendas de hoje</p>
+              <strong>{carregandoResumo ? "..." : dinheiro(vendasHoje)}</strong>
+            </div>
+          </div>
+
+          <div className="stat-card stat-cream">
+            <Image
+              src="/icons/moeda.png"
+              alt="Lucro estimado do mês"
+              width={120}
+              height={120}
+              className="stat-image"
+            />
+            <div>
+              <p>Lucro estimado do mês</p>
+              <strong className="brown-value">
+                {carregandoResumo ? "..." : dinheiro(lucroEstimadoMes)}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <section className="menu-grid">
+          <Link href="/nova-venda" className="menu-card new-sale">
+            <div className="new-sale-icon">+</div>
+            <h2>Nova venda</h2>
+            <span className="arrow">›</span>
+          </Link>
+
+          {menuItems.map((item) => (
+            <Link href={item.href} className={`menu-card ${item.className}`} key={item.title}>
+              <Image
+                src={item.image}
+                alt={item.title}
+                width={170}
+                height={170}
+                className="menu-image"
+              />
+              <h2>{item.title}</h2>
+              <span className="arrow">›</span>
+            </Link>
+          ))}
+        </section>
+
+        <section className="message-card">
+          <span>♡</span>
+          <p>
+            Organize seu negócio
+            <br />
+            e faça mais doces histórias!
+          </p>
+          <span>♡</span>
+        </section>
+      </section>
+
+      <div className="bottom-decoration" />
+    </main>
   );
 }
