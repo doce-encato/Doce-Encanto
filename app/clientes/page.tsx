@@ -20,7 +20,12 @@ type Venda = {
   sale_date: string;
   total: number;
   amount_paid: number;
-  payment_status: "paid" | "pending" | "partial";
+  payment_status:
+    | "paid"
+    | "pending"
+    | "partial"
+    | "canceled";
+  canceled_at: string | null;
 };
 
 type ItemVenda = {
@@ -118,17 +123,20 @@ export default function ClientesPage() {
         `)
         .order("name", { ascending: true }),
 
-      supabase
-        .from("sales")
-        .select(`
-          id,
-          customer_id,
-          sale_date,
-          total,
-          amount_paid,
-          payment_status
-        `)
-        .order("sale_date", { ascending: false }),
+        
+
+     supabase
+  .from("sales")
+  .select(`
+    id,
+    customer_id,
+    sale_date,
+    total,
+    amount_paid,
+    payment_status,
+    canceled_at
+  `)
+  .order("sale_date", { ascending: false }),
 
       supabase
         .from("sale_items")
@@ -162,46 +170,74 @@ export default function ClientesPage() {
       return;
     }
 
-    setClientes(
-      (clientesResposta.data ?? []).map((item) => ({
-        id: Number(item.id),
-        name: String(item.name),
-        phone: item.phone ? String(item.phone) : null,
-        phone_normalized: item.phone_normalized
-          ? String(item.phone_normalized)
-          : null,
-        notes: item.notes ? String(item.notes) : null,
-        created_at: String(item.created_at),
-        updated_at: String(item.updated_at),
-      }))
-    );
+   setClientes(
+  (clientesResposta.data ?? []).map((item) => ({
+    id: Number(item.id),
+    name: String(item.name),
+    phone: item.phone ? String(item.phone) : null,
+    phone_normalized: item.phone_normalized
+      ? String(item.phone_normalized)
+      : null,
+    notes: item.notes ? String(item.notes) : null,
+    created_at: String(item.created_at),
+    updated_at: String(item.updated_at),
+  }))
+);
 
-    setVendas(
-      (vendasResposta.data ?? []).map((item) => ({
-        id: Number(item.id),
-        customer_id:
-          item.customer_id === null ? null : Number(item.customer_id),
-        sale_date: String(item.sale_date),
-        total: Number(item.total ?? 0),
-        amount_paid: Number(item.amount_paid ?? 0),
-        payment_status: String(item.payment_status) as Venda["payment_status"],
-      }))
-    );
+setVendas(
+  (vendasResposta.data ?? []).map((item) => ({
+    id: Number(item.id),
 
-    setItensVenda(
-      (itensResposta.data ?? []).map((item) => ({
-        sale_id: Number(item.sale_id),
-        item_name: String(item.item_name),
-        quantity: Number(item.quantity ?? 0),
-      }))
-    );
+    customer_id:
+      item.customer_id === null
+        ? null
+        : Number(item.customer_id),
 
-    setCarregando(false);
-  }
+    sale_date:
+      String(item.sale_date),
 
-  useEffect(() => {
-    carregarTudo();
-  }, []);
+    total:
+      Number(item.total ?? 0),
+
+    amount_paid:
+      Number(item.amount_paid ?? 0),
+
+    payment_status:
+      String(
+        item.payment_status
+      ) as Venda["payment_status"],
+
+    canceled_at:
+      item.canceled_at
+        ? String(item.canceled_at)
+        : null,
+  }))
+);
+
+setItensVenda(
+  (itensResposta.data ?? []).map((item) => ({
+    sale_id: Number(item.sale_id),
+    item_name: String(item.item_name),
+    quantity: Number(item.quantity ?? 0),
+  }))
+);
+
+setCarregando(false);
+}
+
+useEffect(() => {
+  carregarTudo();
+}, []);
+
+const vendasAtivas = useMemo(
+  () =>
+    vendas.filter(
+      (venda) =>
+        venda.payment_status !== "canceled" &&
+        !venda.canceled_at
+    ),
+  [vendas]
+);
 
   const clientesFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -236,7 +272,7 @@ export default function ClientesPage() {
       });
     });
 
-    vendas.forEach((venda) => {
+    vendasAtivas.forEach((venda) => {
       if (!venda.customer_id) return;
 
       const atual = mapa.get(venda.customer_id);
@@ -254,26 +290,25 @@ export default function ClientesPage() {
     });
 
     return mapa;
-  }, [clientes, vendas]);
-
-  const valorPago = useMemo(() => {
-    return vendas.reduce(
+  }, [clientes, vendasAtivas]);
+const valorPago = useMemo(() => {
+  return vendasAtivas.reduce(
       (soma, venda) => soma + Math.min(venda.amount_paid, venda.total),
       0
     );
-  }, [vendas]);
+  }, [vendasAtivas]);
 
   const valorPendente = useMemo(() => {
-    return vendas.reduce(
+    return vendasAtivas.reduce(
       (soma, venda) => soma + Math.max(0, venda.total - venda.amount_paid),
       0
     );
-  }, [vendas]);
+  }, [vendasAtivas]);
 
   const clientesPendentes = useMemo<ClientePendente[]>(() => {
     return clientes
       .map((cliente) => {
-        const vendasDoCliente = vendas.filter(
+        const vendasDoCliente = vendasAtivas.filter(
           (venda) =>
             venda.customer_id === cliente.id &&
             Math.max(0, venda.total - venda.amount_paid) > 0
@@ -294,7 +329,7 @@ export default function ClientesPage() {
       })
       .filter((item) => item.valorPendente > 0)
       .sort((a, b) => b.valorPendente - a.valorPendente);
-  }, [clientes, vendas]);
+  }, [clientes, vendasAtivas]);
 
   function limparFormulario() {
     setNome("");

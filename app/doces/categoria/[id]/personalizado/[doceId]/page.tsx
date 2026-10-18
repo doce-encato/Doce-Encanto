@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  calcularCustosMediosPonderados,
+  normalizarQuantidadeParaBase,
+} from "@/lib/custos";
 
 type Categoria = {
   id: number;
@@ -30,6 +34,10 @@ type Opcao = {
   part_id: number;
   name: string;
   extra_price: number;
+  cost_source: "recipe" | "inventory";
+  inventory_item_id: number | null;
+  inventory_quantity: number | null;
+  inventory_unit: string | null;
 };
 
 type Criacao = {
@@ -45,6 +53,32 @@ type Escolha = {
   creation_id: number;
   part_id: number;
   option_id: number;
+};
+
+type ReceitaCusto = {
+  id: number;
+  option_id: number | null;
+  yield_quantity: number;
+};
+
+type ReceitaItemCusto = {
+  recipe_id: number;
+  inventory_item_id: number;
+  quantity: number;
+  unit: string;
+};
+
+type EstoqueCusto = {
+  id: number;
+  name: string;
+  unit: string;
+};
+
+type CustoOpcao = {
+  custoUnitario: number | null;
+  semReceita: boolean;
+  custoIncompleto: boolean;
+  itensSemCusto: string[];
 };
 
 function formatarPreco(valor: number) {
@@ -70,6 +104,22 @@ function numeroDoCampo(valor: string) {
   return Number.isFinite(numero) ? numero : NaN;
 }
 
+function formatarUnidade(unidade: string) {
+  return unidade === "unidade" ? "un" : unidade;
+}
+
+function unidadesPermitidas(unidadeBase: string) {
+  if (unidadeBase === "g" || unidadeBase === "kg") return ["g", "kg"];
+  if (unidadeBase === "ml" || unidadeBase === "L") return ["ml", "L"];
+  return ["unidade"];
+}
+
+function unidadeInicial(unidadeBase: string) {
+  if (unidadeBase === "g" || unidadeBase === "kg") return "g";
+  if (unidadeBase === "ml" || unidadeBase === "L") return "ml";
+  return "unidade";
+}
+
 export default function PersonalizadoPage() {
   const params = useParams();
 
@@ -83,6 +133,10 @@ export default function PersonalizadoPage() {
   const [opcoes, setOpcoes] = useState<Opcao[]>([]);
   const [criacoes, setCriacoes] = useState<Criacao[]>([]);
   const [escolhas, setEscolhas] = useState<Escolha[]>([]);
+  const [custosPorOpcao, setCustosPorOpcao] = useState<
+    Record<number, CustoOpcao>
+  >({});
+  const [estoqueDireto, setEstoqueDireto] = useState<EstoqueCusto[]>([]);
 
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -102,6 +156,10 @@ export default function PersonalizadoPage() {
   const [opcaoEditando, setOpcaoEditando] = useState<Opcao | null>(null);
   const [nomeOpcao, setNomeOpcao] = useState("");
   const [precoExtraOpcao, setPrecoExtraOpcao] = useState("");
+  const [tipoCustoOpcao, setTipoCustoOpcao] = useState<"recipe" | "inventory">("recipe");
+  const [inventoryItemOpcao, setInventoryItemOpcao] = useState("");
+  const [inventoryQuantityOpcao, setInventoryQuantityOpcao] = useState("");
+  const [inventoryUnitOpcao, setInventoryUnitOpcao] = useState("unidade");
   const [salvandoOpcao, setSalvandoOpcao] = useState(false);
   const [opcaoExcluindo, setOpcaoExcluindo] = useState<Opcao | null>(null);
 
@@ -117,6 +175,275 @@ export default function PersonalizadoPage() {
   // Receita: por enquanto só identifica qual opção foi clicada.
   // A tela de receita dessa opção será construída na próxima etapa.
   const [opcaoReceita, setOpcaoReceita] = useState<Opcao | null>(null);
+
+  async function carregarCustosOpcoes(opcoesAtuais: Opcao[]) {
+    const mapaInicial: Record<number, CustoOpcao> = {};
+
+    opcoesAtuais.forEach((opcao) => {
+      mapaInicial[opcao.id] = {
+        custoUnitario: null,
+        semReceita: opcao.cost_source === "recipe",
+        custoIncompleto: false,
+        itensSemCusto: [],
+      };
+    });
+
+    setCustosPorOpcao(mapaInicial);
+
+    if (opcoesAtuais.length === 0) return;
+
+    const opcoesReceita = opcoesAtuais.filter(
+      (opcao) => opcao.cost_source !== "inventory"
+    );
+
+    const opcoesEstoque = opcoesAtuais.filter(
+      (opcao) => opcao.cost_source === "inventory"
+    );
+
+    const idsOpcoesReceita = opcoesReceita.map((opcao) => opcao.id);
+
+    let receitas: ReceitaCusto[] = [];
+    let itensReceita: ReceitaItemCusto[] = [];
+
+    if (idsOpcoesReceita.length > 0) {
+      const { data: receitasData, error: receitasError } = await supabase
+        .from("sweet_recipes")
+        .select("id, option_id, yield_quantity")
+        .in("option_id", idsOpcoesReceita)
+        .order("created_at", { ascending: true });
+
+      if (receitasError) {
+        console.error(receitasError);
+        return;
+      }
+
+      receitas = (receitasData ?? []).map((receita) => ({
+        id: Number(receita.id),
+        option_id: receita.option_id == null ? null : Number(receita.option_id),
+        yield_quantity: Number(receita.yield_quantity ?? 0),
+      }));
+
+      const idsReceitas = receitas.map((receita) => receita.id);
+
+      if (idsReceitas.length > 0) {
+        const { data: itensData, error: itensError } = await supabase
+          .from("sweet_recipe_items")
+          .select("recipe_id, inventory_item_id, quantity, unit")
+          .in("recipe_id", idsReceitas);
+
+        if (itensError) {
+          console.error(itensError);
+          return;
+        }
+
+        itensReceita = (itensData ?? []).map((item) => ({
+          recipe_id: Number(item.recipe_id),
+          inventory_item_id: Number(item.inventory_item_id),
+          quantity: Number(item.quantity ?? 0),
+          unit: String(item.unit),
+        }));
+      }
+    }
+
+    const idsEstoque = Array.from(
+      new Set([
+        ...itensReceita.map((item) => item.inventory_item_id),
+        ...opcoesEstoque
+          .map((opcao) => opcao.inventory_item_id)
+          .filter((id): id is number => id != null),
+      ])
+    );
+
+    const resultado: Record<number, CustoOpcao> = { ...mapaInicial };
+
+    if (idsEstoque.length === 0) {
+      opcoesReceita.forEach((opcao) => {
+        const receitasDaOpcao = receitas.filter(
+          (receita) => receita.option_id === opcao.id
+        );
+
+        if (receitasDaOpcao.length > 0) {
+          resultado[opcao.id] = {
+            custoUnitario: null,
+            semReceita: false,
+            custoIncompleto: true,
+            itensSemCusto: [],
+          };
+        }
+      });
+
+      setCustosPorOpcao(resultado);
+      return;
+    }
+
+    const { data: estoqueData, error: estoqueError } = await supabase
+      .from("inventory_items")
+      .select("id, name, unit")
+      .in("id", idsEstoque);
+
+    if (estoqueError) {
+      console.error(estoqueError);
+      return;
+    }
+
+    const estoqueCusto: EstoqueCusto[] = (estoqueData ?? []).map((item) => ({
+      id: Number(item.id),
+      name: String(item.name),
+      unit: String(item.unit),
+    }));
+
+    const unidadesBase = new Map<number, string>(
+      estoqueCusto.map((item) => [item.id, item.unit])
+    );
+
+    const nomesEstoque = new Map<number, string>(
+      estoqueCusto.map((item) => [item.id, item.name])
+    );
+
+    const { data: comprasData, error: comprasError } = await supabase
+      .from("purchase_items")
+      .select("inventory_item_id, quantity, unit, total_price")
+      .in("inventory_item_id", idsEstoque);
+
+    if (comprasError) {
+      console.error(comprasError);
+      return;
+    }
+
+    const custosMedios = calcularCustosMediosPonderados(
+      (comprasData ?? []).map((item) => ({
+        inventory_item_id:
+          item.inventory_item_id == null ? null : Number(item.inventory_item_id),
+        quantity: Number(item.quantity ?? 0),
+        unit: String(item.unit),
+        total_price: Number(item.total_price ?? 0),
+      })),
+      unidadesBase
+    );
+
+    // Opções que usam uma receita produzida.
+    opcoesReceita.forEach((opcao) => {
+      const receitasDaOpcao = receitas.filter(
+        (receita) => receita.option_id === opcao.id
+      );
+
+      if (receitasDaOpcao.length === 0) return;
+
+      let custoUnitarioTotal = 0;
+      let calculoCompleto = true;
+      const semCusto = new Set<string>();
+
+      receitasDaOpcao.forEach((receita) => {
+        if (receita.yield_quantity <= 0) {
+          calculoCompleto = false;
+          return;
+        }
+
+        const itensDaReceita = itensReceita.filter(
+          (item) => item.recipe_id === receita.id
+        );
+
+        if (itensDaReceita.length === 0) {
+          calculoCompleto = false;
+          return;
+        }
+
+        let custoReceita = 0;
+        let receitaCompleta = true;
+
+        itensDaReceita.forEach((item) => {
+          const unidadeBase = unidadesBase.get(item.inventory_item_id);
+          const custoMedio = custosMedios.get(item.inventory_item_id);
+          const quantidadeNormalizada = unidadeBase
+            ? normalizarQuantidadeParaBase(
+                item.quantity,
+                item.unit,
+                unidadeBase
+              )
+            : null;
+
+          if (
+            unidadeBase == null ||
+            custoMedio == null ||
+            quantidadeNormalizada == null
+          ) {
+            receitaCompleta = false;
+            calculoCompleto = false;
+            semCusto.add(
+              nomesEstoque.get(item.inventory_item_id) ??
+                "Ingrediente sem histórico"
+            );
+            return;
+          }
+
+          custoReceita += quantidadeNormalizada * custoMedio;
+        });
+
+        if (receitaCompleta) {
+          custoUnitarioTotal += custoReceita / receita.yield_quantity;
+        }
+      });
+
+      resultado[opcao.id] = {
+        custoUnitario: calculoCompleto ? custoUnitarioTotal : null,
+        semReceita: false,
+        custoIncompleto: !calculoCompleto,
+        itensSemCusto: Array.from(semCusto),
+      };
+    });
+
+    // Opções usadas diretamente do estoque: fruta, Nutella, Oreo etc.
+    opcoesEstoque.forEach((opcao) => {
+      if (
+        opcao.inventory_item_id == null ||
+        opcao.inventory_quantity == null ||
+        !opcao.inventory_unit
+      ) {
+        resultado[opcao.id] = {
+          custoUnitario: null,
+          semReceita: false,
+          custoIncompleto: true,
+          itensSemCusto: [opcao.name],
+        };
+        return;
+      }
+
+      const unidadeBase = unidadesBase.get(opcao.inventory_item_id);
+      const custoMedio = custosMedios.get(opcao.inventory_item_id);
+      const quantidadeNormalizada = unidadeBase
+        ? normalizarQuantidadeParaBase(
+            opcao.inventory_quantity,
+            opcao.inventory_unit,
+            unidadeBase
+          )
+        : null;
+
+      if (
+        unidadeBase == null ||
+        custoMedio == null ||
+        quantidadeNormalizada == null
+      ) {
+        resultado[opcao.id] = {
+          custoUnitario: null,
+          semReceita: false,
+          custoIncompleto: true,
+          itensSemCusto: [
+            nomesEstoque.get(opcao.inventory_item_id) ?? opcao.name,
+          ],
+        };
+        return;
+      }
+
+      resultado[opcao.id] = {
+        custoUnitario: quantidadeNormalizada * custoMedio,
+        semReceita: false,
+        custoIncompleto: false,
+        itensSemCusto: [],
+      };
+    });
+
+    setCustosPorOpcao(resultado);
+  }
 
   async function carregarPagina() {
     setCarregando(true);
@@ -163,6 +490,24 @@ export default function PersonalizadoPage() {
 
     setProduto(produtoConvertido);
 
+    const { data: estoqueDiretoData, error: estoqueDiretoError } = await supabase
+      .from("inventory_items")
+      .select("id, name, unit")
+      .order("name", { ascending: true });
+
+    if (estoqueDiretoError) {
+      console.error(estoqueDiretoError);
+      setEstoqueDireto([]);
+    } else {
+      setEstoqueDireto(
+        (estoqueDiretoData ?? []).map((item) => ({
+          id: Number(item.id),
+          name: String(item.name),
+          unit: String(item.unit),
+        }))
+      );
+    }
+
     if (!produtoConvertido.is_customizable) {
       setErro("Este item não está marcado como personalizável.");
       setCarregando(false);
@@ -194,10 +539,12 @@ export default function PersonalizadoPage() {
 
     const idsGrupos = gruposConvertidos.map((grupo) => grupo.id);
 
+    let opcoesConvertidas: Opcao[] = [];
+
     if (idsGrupos.length > 0) {
       const { data: opcoesData, error: opcoesError } = await supabase
         .from("sweet_part_options")
-        .select("id, part_id, name, extra_price")
+        .select("id, part_id, name, extra_price, cost_source, inventory_item_id, inventory_quantity, inventory_unit")
         .in("part_id", idsGrupos)
         .order("id", { ascending: true });
 
@@ -205,18 +552,33 @@ export default function PersonalizadoPage() {
         console.error(opcoesError);
         setErro("Não foi possível carregar as opções.");
       } else {
-        setOpcoes(
-          (opcoesData ?? []).map((item) => ({
-            id: Number(item.id),
-            part_id: Number(item.part_id),
-            name: String(item.name),
-            extra_price: Number(item.extra_price ?? 0),
-          }))
-        );
+        opcoesConvertidas = (opcoesData ?? []).map((item) => ({
+          id: Number(item.id),
+          part_id: Number(item.part_id),
+          name: String(item.name),
+          extra_price: Number(item.extra_price ?? 0),
+          cost_source:
+            item.cost_source === "inventory" ? "inventory" : "recipe",
+          inventory_item_id:
+            item.inventory_item_id == null
+              ? null
+              : Number(item.inventory_item_id),
+          inventory_quantity:
+            item.inventory_quantity == null
+              ? null
+              : Number(item.inventory_quantity),
+          inventory_unit:
+            item.inventory_unit == null
+              ? null
+              : String(item.inventory_unit),
+        }));
+        setOpcoes(opcoesConvertidas);
       }
     } else {
       setOpcoes([]);
     }
+
+    await carregarCustosOpcoes(opcoesConvertidas);
 
     const { data: criacoesData, error: criacoesError } = await supabase
       .from("sweet_custom_creations")
@@ -284,14 +646,58 @@ export default function PersonalizadoPage() {
     return mapa;
   }, [grupos, opcoes]);
 
-  const totalExtrasSelecionados = useMemo(() => {
-    return Object.values(selecoes)
-      .flat()
-      .reduce((total, opcaoId) => {
-        const opcao = opcoes.find((item) => item.id === opcaoId);
-        return total + Number(opcao?.extra_price ?? 0);
-      }, 0);
-  }, [selecoes, opcoes]);
+
+  const selecaoCompleta = useMemo(() => {
+    if (grupos.length === 0) return false;
+    return grupos.every((grupo) => {
+      const quantidade = (selecoes[grupo.id] ?? []).length;
+      return quantidade >= grupo.min_choices && quantidade <= grupo.max_choices;
+    });
+  }, [grupos, selecoes]);
+
+  const resumoCustoSelecionado = useMemo(() => {
+    const idsSelecionados = Object.values(selecoes).flat();
+    let custoParcial = 0;
+    let incompleto = false;
+    const problemas = new Set<string>();
+
+    idsSelecionados.forEach((opcaoId) => {
+      const opcao = opcoes.find((item) => item.id === opcaoId);
+      const custo = custosPorOpcao[opcaoId];
+      if (!custo || custo.custoUnitario == null) {
+        incompleto = true;
+        if (opcao) problemas.add(opcao.name);
+        return;
+      }
+      custoParcial += custo.custoUnitario;
+    });
+
+    return {
+      quantidadeSelecionada: idsSelecionados.length,
+      custoParcial,
+      custoTotal: selecaoCompleta && idsSelecionados.length > 0 && !incompleto ? custoParcial : null,
+      incompleto,
+      problemas: Array.from(problemas),
+    };
+  }, [selecoes, opcoes, custosPorOpcao, selecaoCompleta]);
+
+  const precoCriacaoNumero = numeroDoCampo(precoCriacao);
+
+  const custoDasReceitas = resumoCustoSelecionado.custoTotal;
+  const contasDaProducao = custoDasReceitas;
+  const maoDeObra = custoDasReceitas;
+  const custoTotalCriacao =
+    custoDasReceitas != null ? custoDasReceitas * 3 : null;
+
+  const sobraCriacao =
+    custoTotalCriacao != null && Number.isFinite(precoCriacaoNumero)
+      ? precoCriacaoNumero - custoTotalCriacao
+      : null;
+
+  const margemCriacao =
+    sobraCriacao != null && precoCriacaoNumero > 0
+      ? (sobraCriacao / precoCriacaoNumero) * 100
+      : null;
 
   function abrirNovoGrupo() {
     setErro("");
@@ -418,6 +824,10 @@ export default function PersonalizadoPage() {
     setOpcaoEditando(null);
     setNomeOpcao("");
     setPrecoExtraOpcao("0,00");
+    setTipoCustoOpcao("recipe");
+    setInventoryItemOpcao("");
+    setInventoryQuantityOpcao("");
+    setInventoryUnitOpcao("unidade");
   }
 
   function abrirEditarOpcao(grupo: Grupo, opcao: Opcao) {
@@ -429,6 +839,14 @@ export default function PersonalizadoPage() {
     setPrecoExtraOpcao(
       Number(opcao.extra_price).toFixed(2).replace(".", ",")
     );
+    setTipoCustoOpcao(opcao.cost_source);
+    setInventoryItemOpcao(
+      opcao.inventory_item_id == null ? "" : String(opcao.inventory_item_id)
+    );
+    setInventoryQuantityOpcao(
+      opcao.inventory_quantity == null ? "" : String(opcao.inventory_quantity)
+    );
+    setInventoryUnitOpcao(opcao.inventory_unit ?? "unidade");
   }
 
   function fecharOpcao() {
@@ -437,6 +855,10 @@ export default function PersonalizadoPage() {
     setOpcaoEditando(null);
     setNomeOpcao("");
     setPrecoExtraOpcao("");
+    setTipoCustoOpcao("recipe");
+    setInventoryItemOpcao("");
+    setInventoryQuantityOpcao("");
+    setInventoryUnitOpcao("unidade");
     setErro("");
   }
 
@@ -455,6 +877,30 @@ export default function PersonalizadoPage() {
       return;
     }
 
+    let inventoryItemId: number | null = null;
+    let inventoryQuantity: number | null = null;
+    let inventoryUnit: string | null = null;
+
+    if (tipoCustoOpcao === "inventory") {
+      inventoryItemId = Number(inventoryItemOpcao);
+      inventoryQuantity = numeroDoCampo(inventoryQuantityOpcao);
+      inventoryUnit = inventoryUnitOpcao;
+
+      if (!inventoryItemId || Number.isNaN(inventoryItemId)) {
+        setErro("Escolha o item que será usado do estoque.");
+        return;
+      }
+
+      if (
+        inventoryQuantity == null ||
+        Number.isNaN(inventoryQuantity) ||
+        inventoryQuantity <= 0
+      ) {
+        setErro("Informe quanto deste item é usado em uma unidade.");
+        return;
+      }
+    }
+
     setSalvandoOpcao(true);
     setErro("");
 
@@ -464,6 +910,10 @@ export default function PersonalizadoPage() {
         .update({
           name: nomeOpcao.trim(),
           extra_price: extra,
+          cost_source: tipoCustoOpcao,
+          inventory_item_id: inventoryItemId,
+          inventory_quantity: inventoryQuantity,
+          inventory_unit: inventoryUnit,
         })
         .eq("id", opcaoEditando.id);
 
@@ -480,6 +930,10 @@ export default function PersonalizadoPage() {
         part_id: grupoParaOpcao.id,
         name: nomeOpcao.trim(),
         extra_price: extra,
+        cost_source: tipoCustoOpcao,
+        inventory_item_id: inventoryItemId,
+        inventory_quantity: inventoryQuantity,
+        inventory_unit: inventoryUnit,
       });
 
       if (error) {
@@ -497,6 +951,10 @@ export default function PersonalizadoPage() {
     setOpcaoEditando(null);
     setNomeOpcao("");
     setPrecoExtraOpcao("");
+    setTipoCustoOpcao("recipe");
+    setInventoryItemOpcao("");
+    setInventoryQuantityOpcao("");
+    setInventoryUnitOpcao("unidade");
     await carregarPagina();
   }
 
@@ -871,6 +1329,215 @@ export default function PersonalizadoPage() {
 
   return (
     <main className="compras-page">
+      <style jsx>{`
+        .custom-v4-option-type {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-top: 6px;
+        }
+
+        .custom-v4-option-type button {
+          min-height: 54px;
+          border: 1px solid #eadfd8;
+          border-radius: 14px;
+          background: #fff;
+          color: #806b62;
+          font-size: 13px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .custom-v4-option-type button.active {
+          border-color: #e6b9c6;
+          background: #fff0f4;
+          color: var(--brown);
+          box-shadow: inset 0 0 0 1px #efcfda;
+        }
+
+        .custom-v4-inventory-box {
+          display: grid;
+          gap: 12px;
+          margin-top: 12px;
+          padding: 14px;
+          border: 1px solid #eadfd8;
+          border-radius: 16px;
+          background: #fffaf8;
+        }
+
+        .custom-v4-qty-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 108px;
+          gap: 8px;
+        }
+
+        .custom-v4-source-chip {
+          display: inline-flex;
+          align-items: center;
+          width: fit-content;
+          margin-top: 4px;
+          padding: 4px 8px;
+          border-radius: 999px;
+          background: #f7efeb;
+          color: #806b62;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .custom-v4-source-chip.inventory {
+          background: #eef7ee;
+          color: #527058;
+        }
+
+        .custom-v4-summary {
+          margin-top: 16px;
+          padding: 14px;
+          border: 1px solid #eadfd8;
+          border-radius: 18px;
+          background: #fff;
+        }
+
+        .custom-v4-summary-title {
+          margin-bottom: 10px;
+          color: var(--brown);
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .custom-v4-summary-list {
+          display: grid;
+          gap: 7px;
+        }
+
+        .custom-v4-summary-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          padding-bottom: 7px;
+          border-bottom: 1px solid #f0e7e2;
+          font-size: 12px;
+        }
+
+        .custom-v4-summary-row:last-child {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+
+        .custom-v4-summary-row span {
+          color: #8b766d;
+        }
+
+        .custom-v4-summary-row strong {
+          color: var(--brown);
+          text-align: right;
+        }
+
+        .custom-v4-cost-card {
+          margin-top: 14px;
+          padding: 15px;
+          border: 1px solid #eadfd8;
+          border-radius: 18px;
+          background: #fffaf8;
+        }
+
+        .custom-v4-cost-lines {
+          display: grid;
+          gap: 9px;
+          margin-top: 10px;
+        }
+
+        .custom-v4-cost-line {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          color: #7d6960;
+          font-size: 13px;
+        }
+
+        .custom-v4-cost-line strong {
+          color: var(--brown);
+          font-size: 14px;
+        }
+
+        .custom-v4-cost-total {
+          margin-top: 3px;
+          padding-top: 10px;
+          border-top: 1px solid #e7d9d2;
+        }
+
+        .custom-v4-cost-total span,
+        .custom-v4-cost-total strong {
+          color: var(--brown);
+          font-weight: 900;
+        }
+
+        .custom-v4-price-card {
+          margin-top: 14px;
+          padding: 15px;
+          border: 1px solid #eadfd8;
+          border-radius: 18px;
+          background: #fff;
+        }
+
+        .custom-v4-price-result {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid #efe5e0;
+        }
+
+        .custom-v4-price-result span {
+          color: #806b62;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .custom-v4-price-result strong {
+          color: var(--brown);
+          font-size: 20px;
+        }
+
+        .custom-v4-price-result.negative strong {
+          color: #b64b40;
+        }
+
+        .custom-v4-margin {
+          margin-top: 4px;
+          color: #9a847a;
+          font-size: 11px;
+          text-align: right;
+        }
+
+        .custom-v4-modal-actions {
+          display: grid;
+          grid-template-columns: 100px minmax(0, 1fr);
+          gap: 8px;
+          margin-top: 16px;
+        }
+
+        .custom-v4-cancel {
+          min-height: 46px;
+          border: 1px solid #e4d8d2;
+          border-radius: 14px;
+          background: #fff;
+          color: #806b62;
+          font-weight: 800;
+        }
+
+        @media (max-width: 420px) {
+          .custom-v4-option-type {
+            grid-template-columns: 1fr;
+          }
+
+          .custom-v4-qty-grid {
+            grid-template-columns: minmax(0, 1fr) 94px;
+          }
+        }
+      `}</style>
       <div className="page-shell">
         <header className="page-header">
           <Link
@@ -884,7 +1551,7 @@ export default function PersonalizadoPage() {
             <span className="page-kicker">PERSONALIZÁVEL</span>
             <h1>{produto.name}</h1>
             <p>
-              Cadastre as partes, sabores e acréscimos. Depois monte uma criação.
+              Cadastre as opções e monte seus personalizados.
             </p>
           </div>
         </header>
@@ -985,6 +1652,42 @@ export default function PersonalizadoPage() {
                                   sem acréscimo
                                 </span>
                               )}
+
+                              <small className="custom-builder-option-cost">
+                                {custosPorOpcao[opcao.id]?.custoUnitario != null
+                                  ? `${opcao.cost_source === "inventory" ? "Custo direto" : "Custo da receita"}: ${formatarPreco(custosPorOpcao[opcao.id].custoUnitario!)}`
+                                  : opcao.cost_source === "inventory"
+                                    ? "Custo direto pendente"
+                                    : custosPorOpcao[opcao.id]?.semReceita
+                                      ? "Sem receita"
+                                      : "Custo pendente"}
+                              </small>
+
+                              <span
+                                className={`custom-v4-source-chip ${
+                                  opcao.cost_source === "inventory" ? "inventory" : ""
+                                }`}
+                              >
+                                {opcao.cost_source === "inventory"
+                                  ? "📦 Item do estoque"
+                                  : "🍰 Usa receita"}
+                              </span>
+
+                              {opcao.cost_source === "inventory" &&
+                                opcao.inventory_item_id != null &&
+                                opcao.inventory_quantity != null && (
+                                  <small className="custom-builder-option-cost">
+                                    {estoqueDireto.find(
+                                      (item) => item.id === opcao.inventory_item_id
+                                    )?.name ?? "Item do estoque"}
+                                    {" • "}
+                                    {opcao.inventory_quantity.toLocaleString("pt-BR", {
+                                      maximumFractionDigits: 3,
+                                    })}{" "}
+                                    {formatarUnidade(opcao.inventory_unit ?? "unidade")}
+                                    {" por unidade"}
+                                  </small>
+                                )}
                             </div>
 
                             <div className="custom-builder-option-actions">
@@ -995,12 +1698,14 @@ export default function PersonalizadoPage() {
                                 Editar
                               </button>
 
-                              <Link
-  href={`/doces/categoria/${categoriaId}/personalizado/${doceId}/opcao/${opcao.id}/receita`}
-  className="recipe"
->
-  Receita
-</Link>
+                              {opcao.cost_source === "recipe" && (
+                                <Link
+                                  href={`/doces/categoria/${categoriaId}/personalizado/${doceId}/opcao/${opcao.id}/receita`}
+                                  className="custom-builder-recipe-action"
+                                >
+                                  Receita
+                                </Link>
+                              )}
 
                               <button
                                 type="button"
@@ -1243,7 +1948,104 @@ export default function PersonalizadoPage() {
               </div>
 
               <div className="form-group">
-                <label>Acréscimo desta opção</label>
+                <label>Como esta opção é usada?</label>
+
+                <div className="custom-v4-option-type">
+                  <button
+                    type="button"
+                    className={tipoCustoOpcao === "recipe" ? "active" : ""}
+                    onClick={() => {
+                      setTipoCustoOpcao("recipe");
+                      setInventoryItemOpcao("");
+                      setInventoryQuantityOpcao("");
+                    }}
+                  >
+                    🍰 Receita feita por ela
+                  </button>
+
+                  <button
+                    type="button"
+                    className={tipoCustoOpcao === "inventory" ? "active" : ""}
+                    onClick={() => setTipoCustoOpcao("inventory")}
+                  >
+                    📦 Item pronto do estoque
+                  </button>
+                </div>
+              </div>
+
+              {tipoCustoOpcao === "inventory" && (
+                <div className="custom-v4-inventory-box">
+                  <div className="form-group">
+                    <label>Qual item do estoque?</label>
+
+                    <select
+                      value={inventoryItemOpcao}
+                      onChange={(evento) => {
+                        const novoId = evento.target.value;
+                        setInventoryItemOpcao(novoId);
+
+                        const item = estoqueDireto.find(
+                          (estoqueItem) => estoqueItem.id === Number(novoId)
+                        );
+
+                        if (item) {
+                          setInventoryUnitOpcao(unidadeInicial(item.unit));
+                        }
+                      }}
+                    >
+                      <option value="">Selecione...</option>
+                      {estoqueDireto.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="custom-v4-qty-grid">
+                    <div className="form-group">
+                      <label>Quanto usa por unidade?</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={inventoryQuantityOpcao}
+                        onChange={(evento) =>
+                          setInventoryQuantityOpcao(evento.target.value)
+                        }
+                        placeholder="Ex.: 50"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Unidade</label>
+                      <select
+                        value={inventoryUnitOpcao}
+                        onChange={(evento) =>
+                          setInventoryUnitOpcao(evento.target.value)
+                        }
+                      >
+                        {unidadesPermitidas(
+                          estoqueDireto.find(
+                            (item) => item.id === Number(inventoryItemOpcao)
+                          )?.unit ?? "unidade"
+                        ).map((unidade) => (
+                          <option key={unidade} value={unidade}>
+                            {formatarUnidade(unidade)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <small>
+                    Ex.: 50 g de morango, 30 g de Nutella ou 2 un de Oreo.
+                  </small>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label>Acréscimo no preço <small>(opcional)</small></label>
 
                 <div className="money-input-row">
                   <span>R$</span>
@@ -1259,7 +2061,7 @@ export default function PersonalizadoPage() {
                 </div>
 
                 <small>
-                  Deixe R$ 0,00 quando esta opção não tiver custo adicional.
+                  É só quanto você quer cobrar a mais. O custo é calculado separadamente.
                 </small>
               </div>
 
@@ -1381,20 +2183,95 @@ export default function PersonalizadoPage() {
                 })}
               </div>
 
-              {totalExtrasSelecionados > 0 && (
-                <div className="custom-builder-extra-reference">
-                  <span>Acréscimos selecionados</span>
-                  <strong>
-                    + {formatarPreco(totalExtrasSelecionados)}
-                  </strong>
-                  <small>
-                    Apenas referência. Você escolhe livremente o preço final abaixo.
-                  </small>
+              {resumoCustoSelecionado.quantidadeSelecionada > 0 && (
+                <div className="custom-v4-summary">
+                  <div className="custom-v4-summary-title">
+                    Seu personalizado
+                  </div>
+
+                  <div className="custom-v4-summary-list">
+                    {grupos.flatMap((grupo) =>
+                      (selecoes[grupo.id] ?? []).map((opcaoId) => {
+                        const opcao = opcoes.find((item) => item.id === opcaoId);
+                        if (!opcao) return null;
+
+                        return (
+                          <div
+                            key={`${grupo.id}-${opcao.id}`}
+                            className="custom-v4-summary-row"
+                          >
+                            <span>{grupo.name}</span>
+                            <strong>{opcao.name}</strong>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               )}
 
+              <div className="custom-v4-cost-card">
+                <span className="section-kicker">CUSTO</span>
+
+                <div className="custom-v4-cost-lines">
+                  <div className="custom-v4-cost-line">
+                    <span>Custo das receitas e itens</span>
+                    <strong>
+                      {custoDasReceitas != null
+                        ? formatarPreco(custoDasReceitas)
+                        : resumoCustoSelecionado.quantidadeSelecionada > 0
+                          ? formatarPreco(resumoCustoSelecionado.custoParcial)
+                          : "—"}
+                    </strong>
+                  </div>
+
+                  <div className="custom-v4-cost-line">
+                    <span>Contas da produção</span>
+                    <strong>
+                      {contasDaProducao != null
+                        ? formatarPreco(contasDaProducao)
+                        : "—"}
+                    </strong>
+                  </div>
+
+                  <div className="custom-v4-cost-line">
+                    <span>Mão de obra</span>
+                    <strong>
+                      {maoDeObra != null
+                        ? formatarPreco(maoDeObra)
+                        : "—"}
+                    </strong>
+                  </div>
+
+                  <div className="custom-v4-cost-line custom-v4-cost-total">
+                    <span>Total de custo</span>
+                    <strong>
+                      {custoTotalCriacao != null
+                        ? formatarPreco(custoTotalCriacao)
+                        : "—"}
+                    </strong>
+                  </div>
+                </div>
+
+                {!selecaoCompleta ? (
+                  <div className="custom-builder-pricing-warning">
+                    Termine as escolhas acima para calcular o custo.
+                  </div>
+                ) : resumoCustoSelecionado.incompleto ? (
+                  <div className="custom-builder-pricing-warning">
+                    <strong>Custo incompleto</strong>
+                    <span>
+                      Confira receita ou histórico de compra em: {resumoCustoSelecionado.problemas.join(", ")}.
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="custom-v4-price-card">
+                <span className="section-kicker">PREÇO DE VENDA</span>
+
               <div className="form-group custom-builder-final-price">
-                <label>Preço desta criação</label>
+                <label>Preço de venda</label>
 
                 <div className="money-input-row">
                   <span>R$</span>
@@ -1407,17 +2284,37 @@ export default function PersonalizadoPage() {
                   />
                 </div>
 
-                <small>
-                  Este é o valor final do produto. Você pode definir o preço que quiser.
-                </small>
+              </div>
+
+                <div
+                  className={`custom-v4-price-result ${
+                    sobraCriacao != null && sobraCriacao < 0 ? "negative" : ""
+                  }`}
+                >
+                  <span>Sobra estimada</span>
+                  <strong>
+                    {sobraCriacao != null
+                      ? formatarPreco(sobraCriacao)
+                      : "—"}
+                  </strong>
+                </div>
+
+                {margemCriacao != null && (
+                  <div className="custom-v4-margin">
+                    Margem {margemCriacao.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 1,
+                      maximumFractionDigits: 1,
+                    })}%
+                  </div>
+                )}
               </div>
 
               {erro && <div className="form-error">{erro}</div>}
 
-              <div className="modal-actions">
+              <div className="custom-v4-modal-actions">
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="custom-v4-cancel"
                   onClick={fecharCriacao}
                   disabled={salvandoCriacao}
                 >
@@ -1443,48 +2340,7 @@ export default function PersonalizadoPage() {
           </div>
         )}
 
-        {/* RECEITA DA OPÇÃO — PRÓXIMA ETAPA */}
-        {opcaoReceita && (
-          <div
-            className="sweet-modal-overlay"
-            onClick={() => setOpcaoReceita(null)}
-          >
-            <div
-              className="sweet-modal-box custom-builder-modal"
-              onClick={(evento) => evento.stopPropagation()}
-            >
-              <button
-                type="button"
-                className="sweet-modal-close"
-                onClick={() => setOpcaoReceita(null)}
-              >
-                ×
-              </button>
-
-              <span className="page-kicker">RECEITA DA OPÇÃO</span>
-              <h2>{opcaoReceita.name}</h2>
-
-              <div className="custom-builder-recipe-placeholder">
-                <strong>Pronto para a próxima etapa</strong>
-                <p>
-                  O botão já está no lugar certo. Agora vamos ligar uma receita
-                  completa a <strong>{opcaoReceita.name}</strong>, com ingredientes,
-                  rendimento, validade, “Fazer receita” e baixa automática do estoque.
-                </p>
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="sweet-new-batch-button"
-                  onClick={() => setOpcaoReceita(null)}
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* As receitas das opções agora usam a rota própria de receita. */}
 
         {/* CONFIRMAÇÕES */}
         {grupoExcluindo && (

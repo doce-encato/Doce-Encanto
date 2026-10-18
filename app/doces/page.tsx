@@ -15,12 +15,8 @@ import {
 type Categoria = {
   id: number;
   name: string;
-
-  sweets?: {
-    count: number;
-  }[];
+  quantidadeSabores: number;
 };
-
 
 export default function DocesPage() {
 
@@ -159,22 +155,13 @@ export default function DocesPage() {
     setErro("");
 
 
-    const {
-      data,
-      error,
-    } =
-      await supabase
-        .from(
-          "sweet_categories"
-        )
-        .select(`
-          id,
-          name,
-          sweets(count)
-        `)
-        .order(
-          "name"
-        );
+const {
+  data,
+  error,
+} = await supabase
+  .from("sweet_categories")
+  .select("id, name")
+  .order("name");
 
 
     if (error) {
@@ -193,13 +180,6 @@ export default function DocesPage() {
 
       return;
     }
-
-
-    setCategorias(
-      (data ?? []) as Categoria[]
-    );
-
-
     /*
     ===========================================
     TOTAL DE DOCES E UNIDADES
@@ -214,10 +194,9 @@ export default function DocesPage() {
         .from(
           "sweets"
         )
-        .select(
-          "id, quantity"
-        );
-
+.select(
+  "id, category_id, quantity, is_customizable"
+);
 
     if (docesError) {
 
@@ -231,10 +210,27 @@ export default function DocesPage() {
     const doces =
       docesData ?? [];
 
+      const saboresNormais = doces.filter(
+  (doce) => !Boolean(doce.is_customizable)
+);
 
-    setTotalDoces(
-      doces.length
-    );
+setTotalDoces(
+  saboresNormais.length
+);
+
+const categoriasConvertidas: Categoria[] =
+  (data ?? []).map((categoria) => ({
+    id: Number(categoria.id),
+    name: String(categoria.name),
+
+    quantidadeSabores: saboresNormais.filter(
+      (doce) =>
+        Number(doce.category_id) ===
+        Number(categoria.id)
+    ).length,
+  }));
+
+setCategorias(categoriasConvertidas);
 
 
     setTotalUnidades(
@@ -854,12 +850,8 @@ if (lotesError) {
                   categoria
                 ) => {
 
-                  const quantidadeDoces =
-                    categoria
-                      .sweets?.[0]
-                      ?.count ??
-                    0;
-
+const quantidadeDoces =
+  categoria.quantidadeSabores;
 
                   return (
 
@@ -1320,44 +1312,23 @@ if (lotesError) {
             </p>
 
 
-            {(categoriaExcluindo
-              .sweets?.[0]
-              ?.count ??
-              0) > 0 && (
+{categoriaExcluindo.quantidadeSabores > 0 && (
+  <div className="sweet-delete-warning">
+    <strong>Atenção</strong>
 
-              <div className="sweet-delete-warning">
-
-                <strong>
-                  Atenção
-                </strong>
-
-                <span>
-
-                  Esta categoria possui{" "}
-
-                  {categoriaExcluindo
-                    .sweets?.[0]
-                    ?.count ??
-                    0}{" "}
-
-                  {(categoriaExcluindo
-                    .sweets?.[0]
-                    ?.count ??
-                    0) === 1
-                    ? "sabor cadastrado"
-                    : "sabores cadastrados"}.
-
-                  {" "}
-                  Ao excluir a categoria,
-                  os itens vinculados a ela
-                  também poderão ser
-                  removidos.
-
-                </span>
-
-              </div>
-
-            )}
+    <span>
+      Esta categoria possui{" "}
+      {categoriaExcluindo.quantidadeSabores}{" "}
+      {categoriaExcluindo.quantidadeSabores === 1
+        ? "sabor cadastrado"
+        : "sabores cadastrados"}.
+      {" "}
+      Ao excluir a categoria,
+      os itens vinculados a ela
+      também poderão ser removidos.
+    </span>
+  </div>
+)}
 
 
             {erro && (

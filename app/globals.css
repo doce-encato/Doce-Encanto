@@ -3128,7 +3128,7 @@ button {
 
 .sweet-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-bottom: 20px;
 }
@@ -9321,4 +9321,2585 @@ a.summary-debt-card:hover { background: #fffaf7; }
     padding: 0 14px;
     line-height: normal;
   }
+}
+
+/* =========================================================
+   COMPRA DETALHADA — PACOTE / CAIXA
+   CORREÇÃO DE ALINHAMENTO
+   ========================================================= */
+
+/* linha que vem logo depois da caixa "Comprei em pacote / caixa" */
+.purchase-form-card .item-promotion-box + .form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+}
+
+.purchase-form-card .item-promotion-box + .form-row .form-group {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.purchase-form-card .item-promotion-box + .form-row .form-group label {
+  display: block;
+  margin: 0 0 8px;
+  min-height: 44px;
+  line-height: 1.25;
+}
+
+.purchase-form-card .item-promotion-box + .form-row .form-group input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 58px;
+  margin: 0;
+}
+
+
+/* CELULAR / TABLET PEQUENO */
+@media (max-width: 750px) {
+
+  .purchase-form-card .item-promotion-box + .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+
+  .purchase-form-card .item-promotion-box + .form-row .form-group {
+    width: 100%;
+  }
+
+  .purchase-form-card .item-promotion-box + .form-row .form-group label {
+    min-height: 0;
+    margin-bottom: 8px;
+  }
+
+  .purchase-form-card .item-promotion-box + .form-row .form-group input {
+    width: 100%;
+    height: 56px;
+  }
+}
+.purchase-edit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: fit-content;
+  min-width: 0;
+
+  padding: 10px 16px;
+
+  border-radius: 10px;
+  border: 1px solid #d6d6d6;
+
+  background: #ffffff;
+  color: #222222;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.purchase-edit-button:hover {
+  background: #f7f7f7;
+  border-color: #bdbdbd;
+}
+
+.purchase-edit-button:active {
+  transform: scale(0.98);
+}
+.purchase-delete-area {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   DOCE - PRECIFICAÇÃO COMPACTA
+   ========================================================= */
+
+.sweet-pricing-card {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #e7e7e7;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.sweet-pricing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sweet-pricing-header h2 {
+  margin: 3px 0 0;
+  font-size: 20px;
+}
+
+.sweet-pricing-recipe-link {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid #d9d9d9;
+  border-radius: 10px;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.sweet-pricing-summary,
+.sweet-pricing-result {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sweet-pricing-summary > div,
+.sweet-pricing-result > div {
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: #f8f8f8;
+}
+
+.sweet-pricing-summary span,
+.sweet-pricing-result span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+.sweet-pricing-summary strong,
+.sweet-pricing-result strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.sweet-pricing-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #faf7ef;
+  font-size: 13px;
+}
+
+.sweet-pricing-shortcuts {
+  margin-top: 16px;
+}
+
+.sweet-pricing-shortcuts > span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sweet-pricing-shortcuts > div {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.sweet-pricing-shortcuts button {
+  min-width: 58px;
+  padding: 8px 10px;
+  border: 1px solid #d8d8d8;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sweet-pricing-shortcuts button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sweet-pricing-price-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.sweet-pricing-price-field {
+  flex: 1;
+  margin: 0;
+}
+
+.sweet-pricing-save-button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sweet-pricing-result {
+  margin-top: 14px;
+}
+
+@media (max-width: 640px) {
+  .sweet-pricing-card {
+    padding: 15px;
+  }
+
+  .sweet-pricing-summary,
+  .sweet-pricing-result {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sweet-pricing-price-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sweet-pricing-save-button {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   PRECIFICAÇÃO - MOBILE FIRST
+   ========================================================= */
+
+.sweet-pricing-card {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #e7e7e7;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.sweet-pricing-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.sweet-pricing-header h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.sweet-pricing-recipe-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-height: 46px;
+
+  padding: 11px 14px;
+
+  border: 1px solid #d9d9d9;
+  border-radius: 12px;
+
+  color: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sweet-pricing-summary,
+.sweet-pricing-result {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.sweet-pricing-summary > div,
+.sweet-pricing-result > div {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 13px;
+  background: #f8f8f8;
+}
+
+.sweet-pricing-summary span,
+.sweet-pricing-result span {
+  display: block;
+  margin-bottom: 5px;
+
+  font-size: 14px;
+  line-height: 1.3;
+  color: #666;
+}
+
+.sweet-pricing-summary strong,
+.sweet-pricing-result strong {
+  display: block;
+
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.sweet-pricing-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  margin-top: 12px;
+  padding: 13px 14px;
+
+  border-radius: 12px;
+
+  background: #faf7ef;
+
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.sweet-pricing-shortcuts {
+  margin-top: 20px;
+}
+
+.sweet-pricing-shortcuts > span {
+  display: block;
+  margin-bottom: 9px;
+
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sweet-pricing-shortcuts > div {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 9px;
+}
+
+.sweet-pricing-shortcuts button {
+  min-height: 46px;
+
+  padding: 10px 12px;
+
+  border: 1px solid #d8d8d8;
+  border-radius: 11px;
+
+  background: #fff;
+
+  font-size: 15px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.sweet-pricing-shortcuts button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sweet-pricing-price-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  margin-top: 18px;
+}
+
+.sweet-pricing-price-field {
+  width: 100%;
+  margin: 0;
+}
+
+.sweet-pricing-price-field label {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sweet-pricing-price-field input {
+  min-height: 48px;
+  font-size: 18px;
+}
+
+.sweet-pricing-save-button {
+  width: 100%;
+  min-height: 48px;
+
+  padding: 11px 16px;
+
+  border: 0;
+  border-radius: 11px;
+
+  font-size: 15px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.sweet-pricing-result {
+  margin-top: 16px;
+}
+
+
+/* =========================================================
+   TABLET / DESKTOP
+   ========================================================= */
+
+@media (min-width: 700px) {
+  .sweet-pricing-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sweet-pricing-recipe-link {
+    width: auto;
+  }
+
+  .sweet-pricing-summary,
+  .sweet-pricing-result {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sweet-pricing-shortcuts > div {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .sweet-pricing-shortcuts button {
+    min-width: 72px;
+  }
+
+  .sweet-pricing-price-row {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .sweet-pricing-save-button {
+    width: auto;
+  }
+}
+
+/* =========================================================
+   CATEGORIA DE DOCES - RESUMO FINANCEIRO MOBILE FIRST
+   Cole no final de app/globals.css
+   ========================================================= */
+
+.sweet-product-info-financial {
+  width: 100%;
+  min-width: 0;
+  gap: 12px;
+}
+
+.sweet-product-name {
+  display: block;
+  padding-right: 34px;
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.sweet-product-financial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  width: 100%;
+}
+
+.sweet-product-financial-grid > div {
+  min-width: 0;
+  padding: 10px 8px;
+  border-radius: 11px;
+  background: #f8f8f8;
+}
+
+.sweet-product-financial-grid span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #707070;
+}
+
+.sweet-product-financial-grid strong {
+  display: block;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sweet-product-stock-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.sweet-product-stock-line > span,
+.sweet-product-stock-line > small {
+  color: #666;
+}
+
+.sweet-product-stock-line > span strong,
+.sweet-product-stock-line > small strong {
+  color: inherit;
+  font-weight: 800;
+}
+
+.sweet-product-stock-line > small {
+  font-size: 13px;
+}
+
+.sweet-product-cost-note {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: #f4f4f4;
+  color: #666;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.sweet-product-cost-note-warning {
+  background: #faf7ef;
+}
+
+/* Mantém espaço para seta/menu sem apertar os números */
+.sweet-product-card-editable .sweet-product-main {
+  align-items: flex-start;
+}
+
+.sweet-product-card-editable .sweet-product-right {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+@media (max-width: 360px) {
+  .sweet-product-financial-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sweet-product-financial-grid > div:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 700px) {
+  .sweet-product-name {
+    font-size: 20px;
+  }
+
+  .sweet-product-financial-grid {
+    max-width: 480px;
+    gap: 10px;
+  }
+
+  .sweet-product-financial-grid > div {
+    padding: 11px 12px;
+  }
+
+  .sweet-product-financial-grid span {
+    font-size: 13px;
+  }
+
+  .sweet-product-financial-grid strong {
+    font-size: 16px;
+  }
+
+  .sweet-product-stock-line {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+  }
+}
+
+/* =========================================================
+   RECEITA - CUSTOS (MOBILE FIRST)
+   ========================================================= */
+
+.sweet-recipe-cost-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 0;
+}
+
+.sweet-recipe-cost-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sweet-recipe-cost-main strong {
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.sweet-recipe-cost-main span {
+  font-size: 14px;
+  color: #666;
+}
+
+.sweet-recipe-cost-values {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8f8f8;
+}
+
+.sweet-recipe-cost-values small {
+  font-size: 13px;
+  line-height: 1.35;
+  color: #666;
+}
+
+.sweet-recipe-cost-values strong {
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.sweet-recipe-cost-missing {
+  color: #9a6414;
+}
+
+.sweet-recipe-cost-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.sweet-recipe-cost-summary > div {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 13px;
+  background: #f8f8f8;
+}
+
+.sweet-recipe-cost-summary span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #666;
+}
+
+.sweet-recipe-cost-summary strong {
+  display: block;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.sweet-recipe-cost-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #faf7ef;
+}
+
+.sweet-recipe-cost-warning strong {
+  font-size: 14px;
+}
+
+.sweet-recipe-cost-warning span {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #666;
+}
+
+@media (min-width: 700px) {
+  .sweet-recipe-cost-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sweet-recipe-cost-values {
+    min-width: 220px;
+    text-align: right;
+  }
+
+  .sweet-recipe-cost-summary {
+    max-width: 520px;
+  }
+}
+
+.sweet-pricing-recipe-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-height: 48px;
+
+  padding: 12px 16px;
+
+  border: 1px solid #cfcfcf;
+  border-radius: 12px;
+
+  background: #f5f5f5;
+
+  color: #222;
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sweet-pricing-recipe-link:active {
+  transform: scale(0.99);
+}
+
+/* =========================================================
+   RECEITA - AJUSTE VISUAL
+   ========================================================= */
+
+.sweet-recipe-card {
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.sweet-recipe-card-header {
+  margin-bottom: 14px;
+}
+
+.sweet-recipe-card-header h2 {
+  margin-top: 4px;
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.sweet-recipe-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.sweet-recipe-summary > div {
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: #f8f8f8;
+}
+
+.sweet-recipe-summary span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #666;
+}
+
+.sweet-recipe-summary strong {
+  font-size: 17px;
+}
+
+.sweet-recipe-ingredients {
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid #ececec;
+}
+
+.sweet-recipe-ingredients > span {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.sweet-recipe-ingredient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.sweet-recipe-ingredient-row {
+  padding: 12px 13px;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.sweet-recipe-ingredient-row strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+
+.sweet-recipe-ingredient-row span {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.sweet-recipe-cost-summary {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 13px;
+  background: #f6f6f6;
+}
+
+.sweet-recipe-cost-summary strong {
+  font-size: 18px;
+}
+
+.sweet-recipe-card-actions {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #ececec;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.sweet-recipe-produce-button {
+  width: 100%;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.sweet-recipe-delete-button,
+.sweet-recipe-edit-button {
+  font-size: 14px;
+}
+
+@media (min-width: 700px) {
+  .sweet-recipe-card {
+    padding: 22px;
+  }
+
+  .sweet-recipe-card-actions {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .sweet-recipe-produce-button {
+    width: auto;
+  }
+}
+
+/* =========================================================
+   RECEITA - LINHA DE ADICIONAR INGREDIENTE
+   ========================================================= */
+
+.sweet-recipe-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  gap: 10px;
+  align-items: end;
+}
+
+.sweet-recipe-add-row .form-group {
+  margin: 0;
+}
+
+.sweet-recipe-add-row .form-group:first-child {
+  min-width: 0;
+}
+
+.sweet-recipe-add-ingredient-button {
+  grid-column: 1 / -1;
+
+  width: 100%;
+  min-height: 46px;
+
+  padding: 11px 16px;
+
+  border: 0;
+  border-radius: 12px;
+
+  font-size: 15px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+@media (min-width: 700px) {
+  .sweet-recipe-add-row {
+    grid-template-columns:
+      minmax(180px, 1fr)
+      120px
+      auto;
+  }
+
+  .sweet-recipe-add-ingredient-button {
+    grid-column: auto;
+
+    width: auto;
+    min-width: 120px;
+  }
+}
+
+/* =========================================================
+   MODAL RECEITA - VISUAL MAIS LIMPO / MOBILE FIRST
+   ========================================================= */
+
+.sweet-recipe-modal {
+  width: min(560px, calc(100vw - 20px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+
+  padding: 26px;
+  border-radius: 22px;
+}
+
+/* TÍTULO */
+
+.sweet-recipe-modal > .page-kicker {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sweet-recipe-modal > h2 {
+  margin: 0 0 20px;
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+/* CAMPOS GERAIS */
+
+.sweet-recipe-modal .form-group {
+  margin-bottom: 16px;
+}
+
+.sweet-recipe-modal .form-group label {
+  display: block;
+  margin-bottom: 7px;
+
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sweet-recipe-modal input,
+.sweet-recipe-modal select {
+  min-height: 52px;
+  border-radius: 14px;
+  font-size: 16px;
+}
+
+/* RENDIMENTO + VALIDADE */
+
+.sweet-recipe-main-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.sweet-recipe-main-fields .form-group {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.sweet-recipe-main-fields .input-with-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+
+.sweet-recipe-main-fields .input-with-unit span {
+  padding: 0;
+  font-size: 13px;
+}
+
+/* DIVISÃO ENTRE DADOS E INGREDIENTES */
+
+.sweet-recipe-divider {
+  height: 1px;
+  margin: 24px 0;
+  background: #ece5e1;
+}
+
+.sweet-recipe-form-title {
+  margin-bottom: 18px;
+}
+
+.sweet-recipe-form-title .section-kicker {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sweet-recipe-form-title h3 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+/* BUSCA */
+
+.sweet-recipe-search-group {
+  margin-bottom: 14px !important;
+}
+
+.sweet-recipe-search-wrapper input {
+  width: 100%;
+}
+
+/* INGREDIENTE SELECIONADO */
+
+.sweet-recipe-selected-ingredient {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  margin: 8px 0 16px;
+  padding: 12px 14px;
+
+  border: 1px solid #eadfd9;
+  border-radius: 13px;
+  background: #fcfaf8;
+}
+
+.sweet-recipe-selected-ingredient span {
+  display: block;
+  margin-bottom: 3px;
+
+  font-size: 11px;
+  color: #777;
+}
+
+.sweet-recipe-selected-ingredient strong {
+  display: block;
+  font-size: 14px;
+}
+
+.sweet-recipe-selected-ingredient button {
+  flex-shrink: 0;
+
+  border: 0;
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* QUANTIDADE + UNIDADE */
+
+.sweet-recipe-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 108px;
+  gap: 10px;
+  align-items: end;
+
+  margin-top: 4px;
+}
+
+.sweet-recipe-add-row .form-group {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+/* ADICIONAR INGREDIENTE = AÇÃO SECUNDÁRIA */
+
+.sweet-recipe-add-ingredient-button {
+  grid-column: 1 / -1;
+
+  width: 100%;
+  min-height: 46px;
+
+  margin-top: 2px;
+  padding: 11px 16px;
+
+  border: 1px solid #dfcdc4;
+  border-radius: 12px;
+
+  background: #f4e9e3;
+  color: #5a2115;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.sweet-recipe-add-ingredient-button:active {
+  transform: scale(0.99);
+}
+
+/* INGREDIENTES JÁ ADICIONADOS */
+
+.sweet-recipe-form-ingredients {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin-top: 18px;
+  padding-top: 16px;
+
+  border-top: 1px solid #eee6e2;
+}
+
+.sweet-recipe-form-ingredient {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 11px 13px;
+
+  border: 1px solid #eee7e3;
+  border-radius: 12px;
+  background: #faf8f7;
+}
+
+.sweet-recipe-form-ingredient strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 14px;
+}
+
+.sweet-recipe-form-ingredient span {
+  display: block;
+  font-size: 13px;
+  color: #666;
+}
+
+.sweet-recipe-form-ingredient > button {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: #f2e8e4;
+
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* BOTÕES FINAIS */
+
+.sweet-recipe-modal .modal-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 9px;
+
+  margin-top: 26px;
+  padding-top: 18px;
+
+  border-top: 1px solid #ece5e1;
+}
+
+.sweet-recipe-modal .modal-actions .sweet-new-batch-button {
+  order: 1;
+
+  width: 100%;
+  min-height: 50px;
+
+  border-radius: 13px;
+
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sweet-recipe-modal .modal-actions .secondary-button {
+  order: 2;
+
+  width: 100%;
+  min-height: 44px;
+
+  border: 0;
+  background: transparent;
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 700px) {
+  .sweet-recipe-modal {
+    padding: 28px;
+  }
+
+  .sweet-recipe-add-row {
+    grid-template-columns:
+      minmax(0, 1fr)
+      110px
+      auto;
+  }
+
+  .sweet-recipe-add-ingredient-button {
+    grid-column: auto;
+
+    width: auto;
+    min-width: 155px;
+    min-height: 52px;
+
+    margin-top: 0;
+  }
+
+  .sweet-recipe-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+
+    gap: 12px;
+  }
+
+  .sweet-recipe-modal .modal-actions .sweet-new-batch-button {
+    order: 2;
+    width: auto;
+    min-width: 155px;
+  }
+
+  .sweet-recipe-modal .modal-actions .secondary-button {
+    order: 1;
+    width: auto;
+  }
+}
+/* PERSONALIZADO - CUSTO E PRECIFICAÇÃO */
+.custom-builder-option-cost {
+  display:block; margin-top:4px; font-size:12px; font-weight:700; color:#6f6864;
+}
+.custom-builder-pricing {
+  margin-top:22px; padding:18px; border:1px solid #eadfd9; border-radius:16px; background:#fcfaf8;
+}
+.custom-builder-pricing-title { margin-bottom:14px; }
+.custom-builder-pricing-title h3 { margin:4px 0 0; font-size:20px; line-height:1.2; }
+.custom-builder-pricing-summary { display:grid; grid-template-columns:1fr; gap:10px; }
+.custom-builder-pricing-summary > div { padding:14px; border-radius:13px; background:#fff; border:1px solid #eee6e2; }
+.custom-builder-pricing-summary span { display:block; margin-bottom:5px; font-size:14px; color:#666; }
+.custom-builder-pricing-summary strong { display:block; font-size:22px; line-height:1.15; }
+.custom-builder-pricing-summary small { display:block; margin-top:4px; font-size:12px; color:#8a817c; }
+.custom-builder-pricing-warning { display:flex; flex-direction:column; gap:4px; margin-top:10px; padding:12px 13px; border-radius:11px; background:#f7f1ee; font-size:13px; line-height:1.4; }
+.custom-builder-pricing .sweet-pricing-shortcuts { margin-top:16px; }
+.custom-builder-pricing-result { margin-top:12px; }
+.custom-builder-final-price { margin-top:18px; }
+@media (min-width:700px) {
+  .custom-builder-pricing { padding:20px; }
+  .custom-builder-pricing-summary { grid-template-columns:minmax(0,220px); }
+}
+
+/* =========================================================
+   PERSONALIZADO - VISUAL MAIS LIMPO
+   ========================================================= */
+
+.custom-builder-section {
+  margin-top: 22px;
+}
+
+/* Cabeçalho da configuração */
+
+.custom-builder-section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.custom-builder-section-header h2 {
+  margin: 4px 0 3px;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.custom-builder-section-header p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Novo grupo */
+
+.custom-builder-secondary-button {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* LISTA */
+
+.custom-builder-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* CARD DO GRUPO */
+
+.custom-builder-group-card {
+  padding: 18px;
+  border-radius: 17px;
+}
+
+/* reduz aquele espaço enorme do topo */
+
+.custom-builder-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+
+  margin-bottom: 13px;
+}
+
+.custom-builder-group-header > div:first-child {
+  min-width: 0;
+}
+
+.custom-builder-group-header span {
+  display: block;
+  margin-bottom: 4px;
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.custom-builder-group-header h3 {
+  margin: 0;
+
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+/* EDITAR / EXCLUIR DO GRUPO */
+
+.custom-builder-inline-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.custom-builder-inline-actions button {
+  padding: 6px 8px;
+
+  border: 0;
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.custom-builder-inline-actions .danger {
+  color: #b7382d;
+}
+
+/* OPÇÕES: tira efeito de "card dentro de card" */
+
+.custom-builder-options {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.custom-builder-option-row {
+  padding: 12px 0;
+
+  border: 0;
+  border-top: 1px solid #eee4df;
+  border-radius: 0;
+  background: transparent;
+}
+
+.custom-builder-option-row:first-child {
+  border-top: 0;
+}
+
+/* NOME / PREÇO / CUSTO */
+
+.custom-builder-option-info {
+  margin-bottom: 9px;
+}
+
+.custom-builder-option-info strong {
+  display: block;
+
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.custom-builder-option-info > span {
+  display: block;
+  margin-top: 3px;
+
+  font-size: 12px;
+}
+
+.custom-builder-option-cost {
+  display: block;
+  margin-top: 4px;
+
+  font-size: 12px;
+  font-weight: 600;
+  color: #777;
+}
+
+/* AÇÕES DA OPÇÃO */
+
+.custom-builder-option-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.custom-builder-option-actions button,
+.custom-builder-option-actions a {
+  min-height: 34px;
+  padding: 7px 10px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: #f7f1ee;
+
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* Receita não precisa parecer o botão principal da página */
+
+.custom-builder-option-actions .recipe {
+  background: #f3e7e1;
+}
+
+.custom-builder-option-actions .danger {
+  background: transparent;
+  color: #b7382d;
+}
+
+/* ADICIONAR OPÇÃO */
+
+.custom-builder-add-option {
+  width: 100%;
+  min-height: 42px;
+
+  margin-top: 10px;
+  padding: 9px 12px;
+
+  border-radius: 11px;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* SEÇÃO CRIAR PERSONALIZADO */
+
+.custom-builder-create-section {
+  margin-top: 18px;
+  padding: 18px;
+
+  border-radius: 17px;
+}
+
+.custom-builder-create-section h2 {
+  margin: 4px 0;
+  font-size: 21px;
+}
+
+.custom-builder-create-section p {
+  margin: 0 0 14px;
+
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.custom-builder-create-button {
+  width: 100%;
+  min-height: 46px;
+
+  border-radius: 12px;
+
+  font-size: 14px;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 700px) {
+  .custom-builder-section-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .custom-builder-secondary-button,
+  .custom-builder-create-button {
+    width: auto;
+  }
+
+  .custom-builder-group-card {
+    padding: 20px 22px;
+  }
+
+  .custom-builder-option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .custom-builder-option-info {
+    margin-bottom: 0;
+  }
+}
+
+/* =========================================================
+   PERSONALIZADO - HIERARQUIA ENTRE GRUPO E OPÇÕES
+   ========================================================= */
+
+.custom-builder-group-card {
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.custom-builder-group-header {
+  display: block;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eadfd9;
+}
+
+.custom-builder-group-header > div:first-child {
+  margin-bottom: 10px;
+}
+
+.custom-builder-group-header span {
+  display: block;
+  margin-bottom: 4px;
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.custom-builder-group-header h3 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.custom-builder-inline-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.custom-builder-inline-actions button {
+  padding: 0;
+  min-height: auto;
+
+  border: 0;
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.custom-builder-inline-actions .danger {
+  color: #b7382d;
+}
+
+
+/* OPÇÕES */
+
+.custom-builder-options {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.custom-builder-options::before {
+  content: "Opções";
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #b75d42;
+}
+
+.custom-builder-option-row {
+  padding: 14px 0;
+
+  border: 0;
+  border-top: 1px solid #f0e7e2;
+  border-radius: 0;
+  background: transparent;
+}
+
+.custom-builder-option-row:first-of-type {
+  border-top: 0;
+}
+
+.custom-builder-option-info {
+  margin-bottom: 10px;
+}
+
+.custom-builder-option-info strong {
+  display: block;
+  margin-bottom: 4px;
+
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.custom-builder-option-info > span,
+.custom-builder-option-cost {
+  display: block;
+  font-size: 12px;
+}
+
+.custom-builder-option-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.custom-builder-option-actions button,
+.custom-builder-option-actions a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 38px;
+  padding: 8px 10px;
+
+  border: 1px solid #eadfd9;
+  border-radius: 10px;
+
+  background: #faf7f5;
+
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.custom-builder-option-actions .recipe {
+  background: #fff;
+}
+
+.custom-builder-option-actions .danger {
+  color: #b7382d;
+  background: transparent;
+}
+
+
+/* ADICIONAR OPÇÃO */
+
+.custom-builder-add-option {
+  width: 100%;
+  min-height: 42px;
+
+  margin-top: 10px;
+
+  border: 1px dashed #d9bfb4;
+  border-radius: 12px;
+
+  background: transparent;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* =========================================================
+   PERSONALIZADO - OPÇÕES MAIS COMPACTAS
+   ========================================================= */
+
+.custom-builder-option-row {
+  padding: 10px 0;
+  border-top: 1px solid #eee5e0;
+}
+
+.custom-builder-option-info {
+  margin-bottom: 7px;
+}
+
+.custom-builder-option-info strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.custom-builder-option-info > span,
+.custom-builder-option-cost {
+  display: inline;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #776f6b;
+}
+
+.custom-builder-option-cost::before {
+  content: " • ";
+}
+
+/* ações viram links compactos */
+
+.custom-builder-option-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.custom-builder-option-actions button,
+.custom-builder-option-actions a {
+  min-height: auto;
+  padding: 0;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.custom-builder-option-actions .recipe {
+  background: transparent;
+}
+
+.custom-builder-option-actions .danger {
+  color: #b7382d;
+}
+
+/* adicionar opção também mais compacto */
+
+.custom-builder-add-option {
+  width: 100%;
+  min-height: 38px;
+
+  margin-top: 8px;
+  padding: 8px 12px;
+
+  border-radius: 10px;
+
+  font-size: 13px;
+}
+
+/* =========================================================
+   PERSONALIZADO - OPÇÕES ULTRACOMPACTAS
+   ========================================================= */
+
+.custom-builder-option-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "info actions";
+  align-items: start;
+  gap: 10px;
+
+  padding: 11px 0;
+
+  border-top: 1px solid #eee5e0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.custom-builder-option-row:first-of-type {
+  border-top: 0;
+}
+
+/* bloco com nome + custo */
+
+.custom-builder-option-info {
+  grid-area: info;
+  min-width: 0;
+  margin: 0;
+}
+
+.custom-builder-option-info strong {
+  display: block;
+
+  margin: 0 0 3px;
+
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.custom-builder-option-info > span,
+.custom-builder-option-cost {
+  display: inline;
+
+  font-size: 12px;
+  line-height: 1.35;
+  color: #776f6b;
+}
+
+.custom-builder-option-cost::before {
+  content: " • ";
+}
+
+/* ações na MESMA LINHA */
+
+.custom-builder-option-actions {
+  grid-area: actions;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+
+  margin: 0;
+  padding-top: 2px;
+
+  white-space: nowrap;
+}
+
+.custom-builder-option-actions button,
+.custom-builder-option-actions a {
+  min-height: auto;
+  padding: 0;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.3;
+
+  text-decoration: none;
+}
+
+.custom-builder-option-actions .recipe {
+  background: transparent;
+}
+
+.custom-builder-option-actions .danger {
+  color: #b7382d;
+}
+
+/* adicionar opção menor também */
+
+.custom-builder-add-option {
+  width: 100%;
+
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 7px 10px;
+
+  border-radius: 10px;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* telas muito estreitas */
+@media (max-width: 390px) {
+  .custom-builder-option-row {
+    gap: 7px;
+  }
+
+  .custom-builder-option-actions {
+    gap: 7px;
+  }
+
+  .custom-builder-option-actions button,
+  .custom-builder-option-actions a {
+    font-size: 10px;
+  }
+}
+
+/* =========================================================
+   PERSONALIZADO - OPÇÕES ORGANIZADAS E ALINHADAS
+   ========================================================= */
+
+.custom-builder-option-row {
+  display: block;
+
+  padding: 12px 0;
+
+  border-top: 1px solid #eee4df;
+  border-radius: 0;
+  background: transparent;
+}
+
+.custom-builder-option-row:first-of-type {
+  border-top: 0;
+}
+
+/* INFO DO SABOR */
+
+.custom-builder-option-info {
+  margin: 0 0 8px;
+}
+
+.custom-builder-option-info strong {
+  display: block;
+
+  margin: 0 0 4px;
+
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.custom-builder-option-info > span,
+.custom-builder-option-cost {
+  display: inline;
+
+  font-size: 12px;
+  line-height: 1.35;
+  color: #776f6b;
+}
+
+.custom-builder-option-cost::before {
+  content: " • ";
+}
+
+/* AÇÕES */
+
+.custom-builder-option-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  margin-top: 7px;
+}
+
+.custom-builder-option-actions button,
+.custom-builder-option-actions a {
+  min-height: auto;
+  padding: 0;
+
+  border: 0;
+  border-radius: 0;
+
+  background: transparent;
+
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
+
+  text-decoration: none;
+}
+
+.custom-builder-option-actions .recipe {
+  background: transparent;
+}
+
+.custom-builder-option-actions .danger {
+  color: #b7382d;
+}
+
+/* ADICIONAR OPÇÃO */
+
+.custom-builder-add-option {
+  width: 100%;
+  min-height: 36px;
+
+  margin-top: 8px;
+  padding: 7px 10px;
+
+  border-radius: 10px;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* =========================================================
+   PERSONALIZADO - AÇÕES DAS OPÇÕES MAIS CLARAS
+   ========================================================= */
+
+.custom-builder-option-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.custom-builder-option-actions button,
+.custom-builder-option-actions a {
+  min-height: 34px;
+  padding: 7px 11px;
+
+  border: 1px solid #e5d8d1;
+  border-radius: 9px;
+
+  background: #faf7f5;
+
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Receita levemente mais destacada */
+
+.custom-builder-option-actions .recipe {
+  background: #f5ebe6;
+  border-color: #dfc8be;
+}
+
+/* Excluir continua claramente destrutivo */
+
+.custom-builder-option-actions .danger {
+  color: #b7382d;
+  background: #fff8f7;
+  border-color: #efd0cc;
+}
+
+/* toque no celular */
+
+.custom-builder-option-actions button:active,
+.custom-builder-option-actions a:active {
+  transform: scale(0.98);
+}
+
+.custom-builder-option-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-builder-option-actions button,
+.custom-builder-option-actions a {
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  padding: 7px 8px;
+
+  border: 1px solid #e5d8d1;
+  border-radius: 9px;
+
+  background: #faf7f5;
+
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+
+  text-decoration: none;
+}
+
+/* Receita mantém destaque, mas SEM ficar maior */
+.custom-builder-option-actions .recipe {
+  flex: 1;
+  min-height: 34px;
+  padding: 7px 8px;
+
+  background: #f5ebe6;
+  border-color: #dfc8be;
+}
+
+/* Excluir */
+.custom-builder-option-actions .danger {
+  flex: 1;
+  color: #b7382d;
+  background: #fff8f7;
+  border-color: #efd0cc;
+}
+
+.custom-builder-option-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.custom-builder-option-actions button,
+.custom-builder-option-actions a,
+.custom-builder-option-actions .recipe,
+.custom-builder-option-actions .danger {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 7px 8px;
+  box-sizing: border-box;
+
+  border-radius: 9px;
+
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* =========================================================
+   PERSONALIZADO - BOTÕES DAS OPÇÕES
+   ========================================================= */
+
+.custom-builder-option-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.custom-builder-option-actions > button,
+.custom-builder-option-actions > .custom-builder-recipe-action {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  min-height: 34px;
+
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: 0;
+  padding: 0 8px;
+
+  border: 1px solid #e5d8d1;
+  border-radius: 9px;
+
+  background: #faf7f5;
+
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+
+  text-decoration: none;
+}
+
+/* Receita */
+.custom-builder-option-actions > .custom-builder-recipe-action {
+  color: #a84e32;
+  background: #faf7f5;
+}
+
+/* Excluir */
+.custom-builder-option-actions > .danger {
+  color: #b7382d;
+  background: #fff8f7;
+  border-color: #efd0cc;
+}
+
+/* =========================================================
+   CATEGORIA DE DOCES - MOBILE FIRST / VISUAL LIMPO
+   ========================================================= */
+
+.sweet-flavors-section {
+  margin-top: 22px !important;
+}
+
+.sweet-flavors-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.sweet-flavors-heading h2 {
+  margin: 3px 0 0;
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.sweet-flavors-heading small {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #746d69;
+}
+
+/* Resumo do topo: mantém os três números legíveis em telas pequenas */
+.sweet-category-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sweet-category-summary > div {
+  min-width: 0;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.sweet-category-summary strong {
+  display: block;
+  font-size: 20px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.sweet-category-summary span {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Lista */
+.sweet-product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sweet-product-card {
+  border-radius: 16px;
+}
+
+.sweet-product-main {
+  min-width: 0;
+}
+
+.sweet-product-info-financial {
+  min-width: 0;
+  width: 100%;
+}
+
+.sweet-product-name {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+/*
+  Venda ocupa a primeira linha inteira.
+  Custo e margem ficam abaixo, lado a lado.
+  Assim nenhum valor importante vira ... no celular.
+*/
+.sweet-product-financial-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.sweet-product-financial-grid > div {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #faf7f5;
+}
+
+.sweet-product-financial-grid > div:first-child {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+}
+
+.sweet-product-financial-grid span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #746d69;
+}
+
+.sweet-product-financial-grid strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.sweet-product-financial-grid > div:first-child strong {
+  font-size: 19px;
+}
+
+.sweet-product-stock-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin-top: 10px;
+}
+
+.sweet-product-stock-line span,
+.sweet-product-stock-line small {
+  white-space: normal;
+}
+
+.sweet-product-cost-note {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.sweet-list-subsection-label {
+  margin-top: 12px;
+  padding: 13px 2px 3px;
+  border-top: 1px solid #eadfd9;
+}
+
+.sweet-list-subsection-label span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  color: #a65a43;
+}
+
+/* O menu de três pontos não deve roubar largura do conteúdo */
+.sweet-product-card-editable {
+  position: relative;
+}
+
+.sweet-product-main {
+  padding-right: 38px;
+}
+
+.sweet-product-menu-wrapper {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+}
+
+@media (min-width: 700px) {
+  .sweet-flavors-heading {
+    flex-direction: row;
+    align-items: end;
+    justify-content: space-between;
+  }
+
+  .sweet-category-summary {
+    gap: 12px;
+  }
+
+  .sweet-category-summary > div {
+    padding: 14px 12px;
+  }
+
+  .sweet-product-financial-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sweet-product-financial-grid > div:first-child {
+    grid-column: auto;
+  }
+
+  .sweet-product-financial-grid > div:first-child strong,
+  .sweet-product-financial-grid strong {
+    font-size: 16px;
+  }
+}
+/* Categoria - organiza canto direito do card */
+
+.sweet-product-card-editable .sweet-product-right {
+  flex-shrink: 0;
+  align-items: flex-start;
+  padding-top: 2px;
+  padding-right: 42px;
+}
+
+.sweet-product-card-editable .sweet-product-menu-wrapper {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+}
+
+.sweet-product-card-editable .sweet-product-menu-button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  font-size: 22px;
+}
+
+/* =========================================================
+   CARD DO SABOR - CONTEÚDO USA A LARGURA TODA
+   ========================================================= */
+
+.sweet-product-card-editable {
+  position: relative;
+}
+
+/* conteúdo principal ocupa o card inteiro */
+.sweet-product-card-editable .sweet-product-main {
+  width: 100%;
+  display: block;
+  padding: 16px 16px 18px;
+}
+
+/* área financeira ocupa toda a largura */
+.sweet-product-card-editable .sweet-product-info-financial {
+  width: 100%;
+  max-width: none;
+}
+
+/* reserva espaço só no topo para selo + menu */
+.sweet-product-name {
+  padding-right: 150px;
+}
+
+/* tira a coluna lateral do fluxo */
+.sweet-product-card-editable .sweet-product-right {
+  position: absolute;
+  top: 13px;
+  right: 46px;
+  padding: 0;
+  margin: 0;
+}
+
+/* menu ⋮ */
+.sweet-product-card-editable .sweet-product-menu-wrapper {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+}
+
+/* Venda passa a ocupar a linha inteira */
+.sweet-product-financial-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+/* primeiro bloco = Venda */
+.sweet-product-financial-grid > div:first-child {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* Custo e Margem dividem a linha */
+.sweet-product-financial-grid > div:nth-child(2),
+.sweet-product-financial-grid > div:nth-child(3) {
+  width: 100%;
+}
+
+/* =========================================================
+   CARD DO SABOR - AJUSTE DESKTOP
+   ========================================================= */
+
+@media (min-width: 700px) {
+  .sweet-product-card-editable .sweet-product-main {
+    padding: 18px 24px 20px;
+  }
+
+  .sweet-product-info-financial {
+    width: 100%;
+  }
+
+  .sweet-product-financial-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .sweet-product-financial-grid > div:first-child {
+    grid-column: auto;
+  }
+
+  .sweet-product-financial-grid > div {
+    min-height: 78px;
+  }
+
+  .sweet-product-stock-line {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-top: 14px;
+  }
+}
+
+.custom-v4-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.custom-v4-cancel {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid #e4d8d2;
+  border-radius: 14px;
+  background: #fff;
+  color: #806b62;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.custom-v4-option-type button {
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #eadfd8;
+  border-radius: 14px;
+  background: #fff;
+
+  color: #806b62;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.custom-v4-qty-grid .form-group {
+  margin: 0;
+  display: grid;
+  grid-template-rows: 52px 58px;
+}
+
+.custom-v4-qty-grid .form-group label {
+  height: 52px;
+  margin: 0;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.custom-v4-qty-grid .form-group input,
+.custom-v4-qty-grid .form-group select {
+  width: 100%;
+  height: 58px;
+  min-height: 58px;
+  margin: 0;
+  box-sizing: border-box;
 }

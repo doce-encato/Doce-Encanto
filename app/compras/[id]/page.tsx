@@ -324,13 +324,22 @@ export default function CompraDetalhesPage() {
           )}
 
 
-          <div className="purchase-delete-area">
+<div className="purchase-delete-area">
 
-            <ExcluirCompraButton
-              compraId={compra.id}
-            />
+  {compra.type === "detailed" && (
+<Link
+  href={`/compras/nova/detalhada?edit=${compra.id}`}
+  className="purchase-edit-button"
+>
+  Editar compra
+</Link>
+  )}
 
-          </div>
+  <ExcluirCompraButton
+    compraId={compra.id}
+  />
+
+</div>
 
         </section>
 

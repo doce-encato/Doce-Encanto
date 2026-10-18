@@ -43,6 +43,37 @@ type ItemCompra = {
   valorDesconto: number;
 
   valorFinal: number;
+
+  purchaseMode: "normal" | "package";
+
+  packageQuantity: number | null;
+
+  unitsPerPackage: number | null;
+};
+
+
+type ItemCompraBanco = {
+  id: number;
+  inventory_item_id: number | null;
+  product_name: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  total_price: number;
+  purchase_mode: "normal" | "package";
+  package_quantity: number | null;
+  units_per_package: number | null;
+  discount_amount: number;
+  discount_percent: number;
+};
+
+type CompraEdicaoBanco = {
+  id: number;
+  store_name: string;
+  purchase_date: string;
+  type: "quick" | "detailed";
+  total: number;
+  purchase_items: ItemCompraBanco[];
 };
 
 
@@ -89,6 +120,12 @@ function dataDeHoje() {
 
 export default function CompraDetalhadaPage() {
   const router = useRouter();
+
+  const [compraEditandoId, setCompraEditandoId] =
+    useState<number | null>(null);
+
+  const [carregandoCompra, setCarregandoCompra] =
+    useState(false);
 
 
   /*
@@ -191,6 +228,15 @@ const [
     setPercentualDesconto,
   ] = useState("");
 
+  const [modoPacote, setModoPacote] =
+    useState(false);
+
+  const [quantidadePacotes, setQuantidadePacotes] =
+    useState("");
+
+  const [unidadesPorPacote, setUnidadesPorPacote] =
+    useState("");
+
 
   /*
    * CARRINHO
@@ -234,20 +280,17 @@ const [
 
       setCarregandoEstoque(false);
 
-      return;
+      return [] as EstoqueItem[];
     }
 
-    setEstoque(
-      (data as EstoqueItem[]) ?? []
-    );
+    const estoqueCarregado =
+      (data as EstoqueItem[]) ?? [];
 
+    setEstoque(estoqueCarregado);
     setCarregandoEstoque(false);
+
+    return estoqueCarregado;
   }
-
-
-  useEffect(() => {
-    carregarEstoque();
-  }, []);
 
 
   /*
@@ -290,44 +333,68 @@ const [
   const quantidadeNumero =
     Number(quantidade) || 0;
 
+  const quantidadePacotesNumero =
+    Number(quantidadePacotes) || 0;
+
+  const unidadesPorPacoteNumero =
+    Number(unidadesPorPacote) || 0;
+
+  const quantidadeTotalPacote =
+    quantidadePacotesNumero *
+    unidadesPorPacoteNumero;
+
+  const quantidadeEfetivaNumero =
+    modoPacote
+      ? quantidadeTotalPacote
+      : quantidadeNumero;
+
   const precoUnitarioNumero =
     Number(
       precoUnitario.replace(",", ".")
     ) || 0;
 
-const descontoReaisNumero =
-  Number(
-    descontoReais.replace(",", ".")
-  ) || 0;
+  const descontoReaisNumero =
+    Number(
+      descontoReais.replace(",", ".")
+    ) || 0;
 
-const percentualDescontoNumero =
-  Number(
-    percentualDesconto.replace(",", ".")
-  ) || 0;
+  const percentualDescontoNumero =
+    Number(
+      percentualDesconto.replace(",", ".")
+    ) || 0;
 
-const subtotalProduto =
-  itemSelecionado?.unit === "unidade"
-    ? quantidadeNumero * precoUnitarioNumero
-    : precoUnitarioNumero;
+  const subtotalProduto =
+    modoPacote
+      ? precoUnitarioNumero
+      : itemSelecionado?.unit === "unidade"
+        ? quantidadeNumero * precoUnitarioNumero
+        : precoUnitarioNumero;
 
-const descontoPercentualValor =
-  subtotalProduto *
-  (
-    percentualDescontoNumero /
-    100
-  );
+  const descontoPercentualValor =
+    subtotalProduto *
+    (percentualDescontoNumero / 100);
 
-const descontoProduto =
-  descontoReaisNumero +
-  descontoPercentualValor;
+  const descontoProduto =
+    descontoReaisNumero +
+    descontoPercentualValor;
 
-const valorFinalProduto =
-  Math.max(
-    0,
-    subtotalProduto -
-      descontoProduto
-  );
+  const valorFinalProduto =
+    Math.max(
+      0,
+      subtotalProduto - descontoProduto
+    );
 
+  const custoUnitarioAntesDesconto =
+    itemSelecionado?.unit === "unidade" &&
+    quantidadeEfetivaNumero > 0
+      ? subtotalProduto / quantidadeEfetivaNumero
+      : precoUnitarioNumero;
+
+  const custoUnitarioFinal =
+    itemSelecionado?.unit === "unidade" &&
+    quantidadeEfetivaNumero > 0
+      ? valorFinalProduto / quantidadeEfetivaNumero
+      : valorFinalProduto;
 
 
   /*
@@ -396,7 +463,11 @@ const valorFinalProduto =
           )
       )
     );
-if (itemCriado.unit === "g") {
+
+    setProdutoSelecionadoId(itemCriado.id);
+    setBuscaProduto(itemCriado.name);
+
+    if (itemCriado.unit === "g") {
   setUnidadeCompra("g");
 } else if (itemCriado.unit === "ml") {
   setUnidadeCompra("ml");
@@ -464,6 +535,237 @@ function formatarEstoqueAtual(
   return `${quantidade.toLocaleString("pt-BR")} ${unidade}`;
 }
 
+
+  async function carregarCompraParaEdicao(
+    compraId: number,
+    estoqueCarregado: EstoqueItem[]
+  ) {
+    setCarregandoCompra(true);
+    setErro("");
+
+    const {
+      data: compraData,
+      error: erroCompra,
+    } = await supabase
+      .from("purchases")
+      .select(`
+        id,
+        store_name,
+        purchase_date,
+        type,
+        total,
+        purchase_items (
+          id,
+          inventory_item_id,
+          product_name,
+          quantity,
+          unit,
+          unit_price,
+          total_price,
+          purchase_mode,
+          package_quantity,
+          units_per_package,
+          discount_amount,
+          discount_percent
+        )
+      `)
+      .eq("id", compraId)
+      .single();
+
+    if (erroCompra || !compraData) {
+      console.error(erroCompra);
+
+      setErro(
+        "Não foi possível carregar a compra para edição."
+      );
+
+      setCarregandoCompra(false);
+      return;
+    }
+
+    const compra =
+      compraData as unknown as CompraEdicaoBanco;
+
+    if (compra.type !== "detailed") {
+      setErro(
+        "Somente compras detalhadas podem ser editadas nesta tela."
+      );
+
+      setCarregandoCompra(false);
+      return;
+    }
+
+    const itemSemEstoque =
+      (compra.purchase_items ?? []).find(
+        (item) => item.inventory_item_id === null
+      );
+
+    if (itemSemEstoque) {
+      setErro(
+        "Esta compra possui um item que não existe mais no estoque. Recrie esse item antes de editar a compra."
+      );
+
+      setCarregandoCompra(false);
+      return;
+    }
+
+    const itensCarregados: ItemCompra[] =
+      (compra.purchase_items ?? []).map(
+        (item) => {
+          const inventoryId =
+            Number(item.inventory_item_id);
+
+          const estoqueItem =
+            estoqueCarregado.find(
+              (produto) =>
+                produto.id === inventoryId
+            );
+
+          const quantidadeItem =
+            Number(item.quantity ?? 0);
+
+          const unidadeItem =
+            String(item.unit);
+
+          const purchaseMode:
+            | "normal"
+            | "package" =
+            item.purchase_mode === "package"
+              ? "package"
+              : "normal";
+
+          const precoUnitarioItem =
+            Number(item.unit_price ?? 0);
+
+          const subtotalNormal =
+            estoqueItem?.unit === "unidade"
+              ? quantidadeItem *
+                precoUnitarioItem
+              : precoUnitarioItem;
+
+          const valorFinal =
+            Number(item.total_price ?? 0);
+
+          const valorDesconto =
+            Math.max(
+              0,
+              subtotalNormal - valorFinal
+            );
+
+          const quantidadeEstoque =
+            purchaseMode === "package"
+              ? quantidadeItem
+              : converterQuantidadeParaEstoque(
+                  quantidadeItem,
+                  unidadeItem,
+                  estoqueItem?.unit ??
+                    unidadeItem
+                );
+
+          return {
+            id: Number(item.id),
+
+            inventory_item_id:
+              inventoryId,
+
+            produto:
+              String(item.product_name),
+
+            quantidade:
+              quantidadeItem,
+
+            unidade:
+              unidadeItem,
+
+            quantidadeEstoque,
+
+            precoUnitario:
+              precoUnitarioItem,
+
+            descontoReais:
+              Number(
+                item.discount_amount ?? 0
+              ),
+
+            percentualDesconto:
+              Number(
+                item.discount_percent ?? 0
+              ),
+
+            subtotalNormal,
+
+            valorDesconto,
+
+            valorFinal,
+
+            purchaseMode,
+
+            packageQuantity:
+              item.package_quantity === null
+                ? null
+                : Number(
+                    item.package_quantity
+                  ),
+
+            unitsPerPackage:
+              item.units_per_package === null
+                ? null
+                : Number(
+                    item.units_per_package
+                  ),
+          };
+        }
+      );
+
+    setCompraEditandoId(compra.id);
+    setLocal(compra.store_name);
+    setData(compra.purchase_date);
+    setItens(itensCarregados);
+
+    setCarregandoCompra(false);
+  }
+
+
+  useEffect(() => {
+    async function inicializarPagina() {
+      const estoqueCarregado =
+        await carregarEstoque();
+
+      const parametros =
+        new URLSearchParams(
+          window.location.search
+        );
+
+      const editar =
+        parametros.get("edit");
+
+      if (!editar) {
+        return;
+      }
+
+      const compraId =
+        Number(editar);
+
+      if (
+        !Number.isInteger(compraId) ||
+        compraId <= 0
+      ) {
+        setErro(
+          "O código da compra para edição é inválido."
+        );
+
+        return;
+      }
+
+      await carregarCompraParaEdicao(
+        compraId,
+        estoqueCarregado
+      );
+    }
+
+    inicializarPagina();
+  }, []);
+
   function adicionarItem() {
     setErro("");
 
@@ -471,126 +773,137 @@ function formatarEstoqueAtual(
       setErro(
         "Selecione um produto."
       );
-
       return;
     }
 
     if (
-      quantidadeNumero <= 0
+      modoPacote &&
+      itemSelecionado.unit !== "unidade"
     ) {
+      setErro(
+        "O modo pacote/caixa só pode ser usado em itens controlados por unidade."
+      );
+      return;
+    }
+
+    if (modoPacote) {
+      if (quantidadePacotesNumero <= 0) {
+        setErro(
+          "Informe quantos pacotes ou caixas foram comprados."
+        );
+        return;
+      }
+
+      if (unidadesPorPacoteNumero <= 0) {
+        setErro(
+          "Informe quantas unidades vêm em cada pacote ou caixa."
+        );
+        return;
+      }
+    } else if (quantidadeNumero <= 0) {
       setErro(
         "Informe uma quantidade válida."
       );
+      return;
+    }
 
+    if (precoUnitarioNumero <= 0) {
+      setErro(
+        modoPacote
+          ? "Informe o valor total pago pelos pacotes."
+          : "Informe o preço do produto."
+      );
+      return;
+    }
+
+    if (descontoReaisNumero < 0) {
+      setErro(
+        "O desconto em reais não pode ser negativo."
+      );
       return;
     }
 
     if (
-      precoUnitarioNumero <= 0
+      percentualDescontoNumero < 0 ||
+      percentualDescontoNumero > 100
     ) {
       setErro(
-        "Informe o preço unitário."
+        "O desconto em porcentagem deve ficar entre 0% e 100%."
       );
-
       return;
     }
 
-function formatarEstoqueAtual(
-  quantidade: number,
-  unidade: string
-) {
-  if (unidade === "g" && quantidade >= 1000) {
-    return `${(quantidade / 1000).toLocaleString("pt-BR", {
-      maximumFractionDigits: 3,
-    })} kg`;
-  }
+    if (descontoProduto > subtotalProduto) {
+      setErro(
+        "O desconto não pode ser maior que o valor do produto."
+      );
+      return;
+    }
 
-  if (unidade === "ml" && quantidade >= 1000) {
-    return `${(quantidade / 1000).toLocaleString("pt-BR", {
-      maximumFractionDigits: 3,
-    })} L`;
-  }
+    const quantidadeConvertida =
+      modoPacote
+        ? quantidadeTotalPacote
+        : converterQuantidadeParaEstoque(
+            quantidadeNumero,
+            unidadeCompra,
+            itemSelecionado.unit
+          );
 
-  return `${quantidade.toLocaleString("pt-BR")} ${unidade}`;
-}
-    /*
-     * Se informou quantidade em promoção,
-     * precisa informar a porcentagem.
-     */
-if (
-  descontoReaisNumero < 0
-) {
-  setErro(
-    "O desconto em reais não pode ser negativo."
-  );
-  return;
-}
+    const novoItem: ItemCompra = {
+      id: Date.now(),
 
-if (
-  percentualDescontoNumero < 0 ||
-  percentualDescontoNumero > 100
-) {
-  setErro(
-    "O desconto em porcentagem deve ficar entre 0% e 100%."
-  );
-  return;
-}
+      inventory_item_id:
+        itemSelecionado.id,
 
-if (
-  descontoProduto >
-  subtotalProduto
-) {
-  setErro(
-    "O desconto não pode ser maior que o valor do produto."
-  );
-  return;
-}
+      produto:
+        itemSelecionado.name,
 
-const quantidadeConvertida =
-  converterQuantidadeParaEstoque(
-    quantidadeNumero,
-    unidadeCompra,
-    itemSelecionado.unit
-  );
+      quantidade:
+        modoPacote
+          ? quantidadeTotalPacote
+          : quantidadeNumero,
 
+      quantidadeEstoque:
+        quantidadeConvertida,
 
-const novoItem: ItemCompra = {
-  id: Date.now(),
+      unidade:
+        modoPacote
+          ? "unidade"
+          : unidadeCompra,
 
-  inventory_item_id:
-    itemSelecionado.id,
+      precoUnitario:
+        itemSelecionado.unit === "unidade"
+          ? custoUnitarioAntesDesconto
+          : precoUnitarioNumero,
 
-  produto:
-    itemSelecionado.name,
+      descontoReais:
+        descontoReaisNumero,
 
-  quantidade:
-    quantidadeNumero,
+      percentualDesconto:
+        percentualDescontoNumero,
 
-  quantidadeEstoque:
-    quantidadeConvertida,
+      subtotalNormal:
+        subtotalProduto,
 
-  unidade:
-    unidadeCompra,
+      valorDesconto:
+        descontoProduto,
 
-  precoUnitario:
-    precoUnitarioNumero,
+      valorFinal:
+        valorFinalProduto,
 
-  descontoReais:
-    descontoReaisNumero,
+      purchaseMode:
+        modoPacote ? "package" : "normal",
 
-  percentualDesconto:
-    percentualDescontoNumero,
+      packageQuantity:
+        modoPacote
+          ? quantidadePacotesNumero
+          : null,
 
-  subtotalNormal:
-    subtotalProduto,
-
-  valorDesconto:
-    descontoProduto,
-
-  valorFinal:
-    valorFinalProduto,
-};
-
+      unitsPerPackage:
+        modoPacote
+          ? unidadesPorPacoteNumero
+          : null,
+    };
 
     setItens(
       (itensAtuais) => [
@@ -599,25 +912,20 @@ const novoItem: ItemCompra = {
       ]
     );
 
-
     /*
      * LIMPA PARA O PRÓXIMO PRODUTO
      */
     setProdutoSelecionadoId(null);
-
     setBuscaProduto("");
-
     setMostrarResultados(false);
-
     setQuantidade("");
-
     setPrecoUnitario("");
-
     setDescontoReais("");
-
     setPercentualDesconto("");
+    setModoPacote(false);
+    setQuantidadePacotes("");
+    setUnidadesPorPacote("");
   }
-
 
   /*
    * REMOVER DO CARRINHO
@@ -709,6 +1017,102 @@ const novoItem: ItemCompra = {
 
 
     /*
+     * MODO EDIÇÃO
+     *
+     * Mantém o mesmo ID da compra e usa a função
+     * do banco para substituir os itens e ajustar
+     * o estoque somente pela diferença.
+     */
+    if (compraEditandoId) {
+      const itensParaAtualizar =
+        itens.map(
+          (item) => ({
+            inventory_item_id:
+              item.inventory_item_id,
+
+            product_name:
+              item.produto,
+
+            quantity:
+              item.quantidade,
+
+            unit:
+              item.unidade,
+
+            unit_price:
+              item.precoUnitario,
+
+            purchase_mode:
+              item.purchaseMode,
+
+            package_quantity:
+              item.packageQuantity,
+
+            units_per_package:
+              item.unitsPerPackage,
+
+            discount_amount:
+              item.descontoReais,
+
+            discount_percent:
+              item.percentualDesconto,
+
+            total_price:
+              item.valorFinal,
+
+            stock_quantity:
+              item.quantidadeEstoque,
+          })
+        );
+
+      const {
+        error: erroEdicao,
+      } = await supabase.rpc(
+        "update_detailed_purchase",
+        {
+          p_purchase_id:
+            compraEditandoId,
+
+          p_store_name:
+            local.trim(),
+
+          p_purchase_date:
+            data,
+
+          p_total:
+            total,
+
+          p_items:
+            itensParaAtualizar,
+        }
+      );
+
+      if (erroEdicao) {
+        console.error(
+          erroEdicao
+        );
+
+        setErro(
+          "Não foi possível salvar as alterações da compra."
+        );
+
+        setSalvando(false);
+        return;
+      }
+
+      setSalvando(false);
+
+      router.push(
+        `/compras/${compraEditandoId}`
+      );
+
+      router.refresh();
+
+      return;
+    }
+
+
+    /*
      * 1. CRIA A COMPRA
      */
     const {
@@ -777,11 +1181,20 @@ const novoItem: ItemCompra = {
           unit_price:
             item.precoUnitario,
 
-         discount_amount:
-  item.descontoReais,
+          purchase_mode:
+            item.purchaseMode,
 
-discount_percent:
-  item.percentualDesconto,
+          package_quantity:
+            item.packageQuantity,
+
+          units_per_package:
+            item.unitsPerPackage,
+
+          discount_amount:
+            item.descontoReais,
+
+          discount_percent:
+            item.percentualDesconto,
 
           /*
            * total_price =
@@ -927,7 +1340,11 @@ discount_percent:
         <header className="page-header">
 
           <Link
-            href="/compras/nova"
+            href={
+              compraEditandoId
+                ? `/compras/${compraEditandoId}`
+                : "/compras/nova"
+            }
             className="back-button"
           >
             ←
@@ -936,17 +1353,21 @@ discount_percent:
           <div>
 
             <span className="page-kicker">
-              NOVA COMPRA
+              {compraEditandoId
+                ? "EDITAR COMPRA"
+                : "NOVA COMPRA"}
             </span>
 
             <h1>
-              Compra detalhada
+              {compraEditandoId
+                ? "Editar compra detalhada"
+                : "Compra detalhada"}
             </h1>
 
             <p>
-              Registre os produtos comprados
-              e o estoque será atualizado
-              automaticamente.
+              {compraEditandoId
+                ? "Altere os dados da compra e salve por cima do registro existente."
+                : "Registre os produtos comprados e o estoque será atualizado automaticamente."}
             </p>
 
           </div>
@@ -1153,6 +1574,10 @@ onClick={() => {
     setUnidadeCompra("unidade");
   }
 
+  setModoPacote(false);
+  setQuantidadePacotes("");
+  setUnidadesPorPacote("");
+
   setMostrarResultados(
     false
   );
@@ -1253,45 +1678,143 @@ onClick={() => {
             
 
 
-            {/* QUANTIDADE */}
+            {/* MODO PACOTE / CAIXA */}
+            {itemSelecionado?.unit === "unidade" && (
+              <div className="item-promotion-box">
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: "pointer",
+                    fontWeight: 800,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={modoPacote}
+                    onChange={(event) => {
+                      const marcado =
+                        event.target.checked;
+
+                      setModoPacote(marcado);
+                      setQuantidade("");
+                      setQuantidadePacotes("");
+                      setUnidadesPorPacote("");
+                      setPrecoUnitario("");
+                    }}
+                  />
+                  Comprei em pacote / caixa
+                </label>
+
+                <small className="inventory-help">
+                  Use quando uma embalagem contém várias unidades.
+                  Ex.: 1 pacote com 25 potes por R$ 25,00.
+                </small>
+              </div>
+            )}
+
+
+            {modoPacote &&
+            itemSelecionado?.unit === "unidade" ? (
+              <>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>
+                      Quantidade de pacotes / caixas
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="Ex: 1"
+                      value={quantidadePacotes}
+                      onChange={(event) =>
+                        setQuantidadePacotes(
+                          event.target.value
+                        )
+                      }
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      Unidades por pacote / caixa
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="Ex: 25"
+                      value={unidadesPorPacote}
+                      onChange={(event) =>
+                        setUnidadesPorPacote(
+                          event.target.value
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+
+                {quantidadeTotalPacote > 0 && (
+                  <div className="selected-stock-info">
+                    <span>
+                      Entram no estoque:
+                      <strong>
+                        {" "}
+                        {quantidadeTotalPacote.toLocaleString(
+                          "pt-BR"
+                        )}{" "}
+                        unidades
+                      </strong>
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="form-group">
+                <label>
+                  Quantidade comprada
+                </label>
+
+                <div className="quantity-input-with-unit">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    placeholder="Ex: 5"
+                    value={quantidade}
+                    onChange={(event) =>
+                      setQuantidade(
+                        event.target.value
+                      )
+                    }
+                  />
+
+                  {itemSelecionado && (
+                    <span>
+                      {unidadeCompra}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+
+            {/* PREÇO */}
             <div className="form-group">
-  <label>
-    Quantidade comprada
-  </label>
+              <label>
+                {modoPacote &&
+                itemSelecionado?.unit === "unidade"
+                  ? "Valor total dos pacotes / caixas"
+                  : itemSelecionado?.unit === "unidade"
+                    ? "Preço por unidade"
+                    : "Valor total do produto"}
+              </label>
 
-  <div className="quantity-input-with-unit">
-    <input
-      type="number"
-      min="0"
-      step="0.001"
-      placeholder="Ex: 5"
-      value={quantidade}
-      onChange={(event) =>
-        setQuantidade(
-          event.target.value
-        )
-      }
-    />
-
-    {itemSelecionado && (
-      <span>
-        {unidadeCompra}
-      </span>
-    )}
-  </div>
-</div>
-
-
-            {/* PREÇO UNITÁRIO */}
-            <div className="form-group">
-
-<label>
-  {itemSelecionado?.unit === "unidade"
-    ? "Preço por unidade"
-    : "Valor total do produto"}
-</label>
               <div className="money-input">
-
                 <span>
                   R$
                 </span>
@@ -1300,7 +1823,7 @@ onClick={() => {
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="Ex: 7,00"
+                  placeholder="Ex: 25,00"
                   value={precoUnitario}
                   onChange={(event) =>
                     setPrecoUnitario(
@@ -1308,16 +1831,16 @@ onClick={() => {
                     )
                   }
                 />
-
               </div>
 
-<small className="inventory-help">
-  {itemSelecionado?.unit === "unidade"
-    ? "Informe o preço de cada unidade antes do desconto."
-    : "Informe o valor total pago por essa quantidade antes do desconto."
-  }
-</small>
-
+              <small className="inventory-help">
+                {modoPacote &&
+                itemSelecionado?.unit === "unidade"
+                  ? "Informe quanto foi pago no total pelos pacotes antes do desconto. O custo por unidade será calculado automaticamente."
+                  : itemSelecionado?.unit === "unidade"
+                    ? "Informe o preço de cada unidade antes do desconto."
+                    : "Informe o valor total pago por essa quantidade antes do desconto."}
+              </small>
             </div>
 
 {/* PROMOÇÃO */}
@@ -1394,7 +1917,7 @@ onClick={() => {
 
 
   {/* PRÉVIA DO VALOR */}
-  {quantidadeNumero > 0 &&
+  {quantidadeEfetivaNumero > 0 &&
     precoUnitarioNumero > 0 && (
 
       <div className="item-price-preview">
@@ -1441,6 +1964,22 @@ onClick={() => {
             )}
           </strong>
         </div>
+
+        {modoPacote &&
+          itemSelecionado?.unit === "unidade" &&
+          quantidadeTotalPacote > 0 && (
+            <div>
+              <span>
+                Custo por unidade
+              </span>
+
+              <strong>
+                {formatarDinheiro(
+                  custoUnitarioFinal
+                )}
+              </strong>
+            </div>
+          )}
 
       </div>
 
@@ -1544,6 +2083,18 @@ onClick={() => {
                         {" / "}
                         {item.unidade}
                       </span>
+
+                      {item.purchaseMode === "package" && (
+                        <small className="cart-promotion">
+                          {item.packageQuantity}{" "}
+                          {item.packageQuantity === 1
+                            ? "pacote/caixa"
+                            : "pacotes/caixas"}
+                          {" × "}
+                          {item.unitsPerPackage}{" "}
+                          unidades
+                        </small>
+                      )}
 
 
 {item.valorDesconto > 0 && (
@@ -1663,13 +2214,19 @@ onClick={() => {
               className="save-purchase-button"
               disabled={
                 itens.length === 0 ||
-                salvando
+                salvando ||
+                carregandoCompra ||
+                carregandoEstoque
               }
               onClick={salvarCompra}
             >
               {salvando
                 ? "Salvando..."
-                : "Salvar compra"
+                : carregandoCompra
+                  ? "Carregando compra..."
+                  : compraEditandoId
+                    ? "Salvar alterações"
+                    : "Salvar compra"
               }
             </button>
 

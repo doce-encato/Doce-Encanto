@@ -210,14 +210,15 @@ const valor =
     const novaQuantidade =
       Number(item.quantity) + valor;
 
-    const { error } = await supabase
-      .from("inventory_items")
-      .update({
-        quantity: novaQuantidade,
-        updated_at:
-          new Date().toISOString(),
-      })
-      .eq("id", item.id);
+const { error } = await supabase
+  .from("inventory_items")
+  .update({
+    name: nome.trim(),
+    unit: unidade,
+    minimum_quantity: Number(minimo),
+    updated_at: new Date().toISOString(),
+  })
+  .eq("id", item.id);
 
     if (error) {
       console.error(error);
@@ -328,6 +329,7 @@ const { error } = await supabase
   .from("inventory_items")
   .update({
     name: nome.trim(),
+    unit: unidade,
     minimum_quantity: Number(minimo),
     updated_at: new Date().toISOString(),
   })

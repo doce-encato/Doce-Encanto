@@ -97,7 +97,7 @@ export default function Home() {
               <span className="small-heart">♡</span>
               <span />
             </div>
-            <p>DOCES QUE FAZEM A VIDA MAIS DOCE</p>
+            <p>FEITO COM CARRINHO PARA VOCÊ!</p>
           </div>
         </div>
       </section>

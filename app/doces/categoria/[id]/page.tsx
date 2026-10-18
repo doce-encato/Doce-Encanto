@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  calcularCustosMediosPonderados,
+  normalizarQuantidadeParaBase,
+} from "@/lib/custos";
 
 type Categoria = {
   id: number;
@@ -26,6 +30,25 @@ type CriacaoPersonalizada = {
   name: string;
   sale_price: number;
   is_archived: boolean;
+};
+
+type ResumoCustoDoce = {
+  custoUnitario: number | null;
+  semReceita: boolean;
+  custoIncompleto: boolean;
+};
+
+type ReceitaCustoCategoria = {
+  id: number;
+  sweet_id: number;
+  yield_quantity: number;
+};
+
+type ItemReceitaCustoCategoria = {
+  recipe_id: number;
+  inventory_item_id: number;
+  quantity: number;
+  unit: string;
 };
 
 function numeroDoCampo(valor: string) {
@@ -242,6 +265,11 @@ export default function CategoriaDocesPage() {
   ] =
     useState(0);
 
+  const [
+    custosPorDoce,
+    setCustosPorDoce,
+  ] = useState<Record<number, ResumoCustoDoce>>({});
+
   const docesNormais =
     useMemo(
       () =>
@@ -339,6 +367,265 @@ export default function CategoriaDocesPage() {
         insertError
       );
     }
+  }
+
+  async function carregarCustosDaCategoria(
+    listaDoces: Doce[]
+  ) {
+    const docesParaCalcular = listaDoces.filter(
+      (item) => !item.is_customizable
+    );
+
+    if (docesParaCalcular.length === 0) {
+      setCustosPorDoce({});
+      return;
+    }
+
+    const idsDoces = docesParaCalcular.map(
+      (item) => item.id
+    );
+
+    const resumoInicial: Record<number, ResumoCustoDoce> = {};
+
+    idsDoces.forEach((id) => {
+      resumoInicial[id] = {
+        custoUnitario: null,
+        semReceita: true,
+        custoIncompleto: false,
+      };
+    });
+
+    const {
+      data: receitasData,
+      error: receitasError,
+    } = await supabase
+      .from("sweet_recipes")
+      .select("id, sweet_id, yield_quantity")
+      .in("sweet_id", idsDoces)
+      .order("created_at", { ascending: true });
+
+    if (receitasError) {
+      console.error(receitasError);
+      setCustosPorDoce(resumoInicial);
+      return;
+    }
+
+    const receitas: ReceitaCustoCategoria[] =
+      (receitasData ?? [])
+        .filter((receita) => receita.sweet_id != null)
+        .map((receita) => ({
+          id: Number(receita.id),
+          sweet_id: Number(receita.sweet_id),
+          yield_quantity: Number(receita.yield_quantity ?? 0),
+        }));
+
+    receitas.forEach((receita) => {
+      resumoInicial[receita.sweet_id] = {
+        custoUnitario: null,
+        semReceita: false,
+        custoIncompleto: false,
+      };
+    });
+
+    if (receitas.length === 0) {
+      setCustosPorDoce(resumoInicial);
+      return;
+    }
+
+    const idsReceitas = receitas.map(
+      (receita) => receita.id
+    );
+
+    const {
+      data: itensData,
+      error: itensError,
+    } = await supabase
+      .from("sweet_recipe_items")
+      .select("recipe_id, inventory_item_id, quantity, unit")
+      .in("recipe_id", idsReceitas);
+
+    if (itensError) {
+      console.error(itensError);
+
+      receitas.forEach((receita) => {
+        resumoInicial[receita.sweet_id] = {
+          custoUnitario: null,
+          semReceita: false,
+          custoIncompleto: true,
+        };
+      });
+
+      setCustosPorDoce(resumoInicial);
+      return;
+    }
+
+    const itensReceita: ItemReceitaCustoCategoria[] =
+      (itensData ?? []).map((item) => ({
+        recipe_id: Number(item.recipe_id),
+        inventory_item_id: Number(item.inventory_item_id),
+        quantity: Number(item.quantity ?? 0),
+        unit: String(item.unit),
+      }));
+
+    const idsEstoque = Array.from(
+      new Set(
+        itensReceita.map(
+          (item) => item.inventory_item_id
+        )
+      )
+    );
+
+    if (idsEstoque.length === 0) {
+      receitas.forEach((receita) => {
+        resumoInicial[receita.sweet_id] = {
+          custoUnitario: null,
+          semReceita: false,
+          custoIncompleto: true,
+        };
+      });
+
+      setCustosPorDoce(resumoInicial);
+      return;
+    }
+
+    const {
+      data: estoqueData,
+      error: estoqueError,
+    } = await supabase
+      .from("inventory_items")
+      .select("id, unit")
+      .in("id", idsEstoque);
+
+    if (estoqueError) {
+      console.error(estoqueError);
+      setCustosPorDoce(resumoInicial);
+      return;
+    }
+
+    const unidadesBase = new Map<number, string>(
+      (estoqueData ?? []).map((item) => [
+        Number(item.id),
+        String(item.unit),
+      ])
+    );
+
+    const {
+      data: comprasData,
+      error: comprasError,
+    } = await supabase
+      .from("purchase_items")
+      .select("inventory_item_id, quantity, unit, total_price")
+      .in("inventory_item_id", idsEstoque);
+
+    if (comprasError) {
+      console.error(comprasError);
+      setCustosPorDoce(resumoInicial);
+      return;
+    }
+
+    const custosMedios = calcularCustosMediosPonderados(
+      (comprasData ?? []).map((item) => ({
+        inventory_item_id:
+          item.inventory_item_id == null
+            ? null
+            : Number(item.inventory_item_id),
+        quantity: Number(item.quantity ?? 0),
+        unit: String(item.unit),
+        total_price: Number(item.total_price ?? 0),
+      })),
+      unidadesBase
+    );
+
+    const receitasPorDoce = new Map<number, ReceitaCustoCategoria[]>();
+
+    receitas.forEach((receita) => {
+      const atuais = receitasPorDoce.get(receita.sweet_id) ?? [];
+      atuais.push(receita);
+      receitasPorDoce.set(receita.sweet_id, atuais);
+    });
+
+    const resultado: Record<number, ResumoCustoDoce> = {
+      ...resumoInicial,
+    };
+
+    docesParaCalcular.forEach((doce) => {
+      const receitasDoDoce = receitasPorDoce.get(doce.id) ?? [];
+
+      if (receitasDoDoce.length === 0) {
+        resultado[doce.id] = {
+          custoUnitario: null,
+          semReceita: true,
+          custoIncompleto: false,
+        };
+        return;
+      }
+
+      let custoUnitarioTotal = 0;
+      let completo = true;
+
+      receitasDoDoce.forEach((receita) => {
+        if (receita.yield_quantity <= 0) {
+          completo = false;
+          return;
+        }
+
+        const itensDaReceita = itensReceita.filter(
+          (item) => item.recipe_id === receita.id
+        );
+
+        if (itensDaReceita.length === 0) {
+          completo = false;
+          return;
+        }
+
+        let custoDaReceita = 0;
+
+        itensDaReceita.forEach((item) => {
+          const unidadeBase = unidadesBase.get(
+            item.inventory_item_id
+          );
+
+          const custoMedio = custosMedios.get(
+            item.inventory_item_id
+          );
+
+          const quantidadeNormalizada = unidadeBase
+            ? normalizarQuantidadeParaBase(
+                item.quantity,
+                item.unit,
+                unidadeBase
+              )
+            : null;
+
+          if (
+            unidadeBase == null ||
+            custoMedio == null ||
+            quantidadeNormalizada == null
+          ) {
+            completo = false;
+            return;
+          }
+
+          custoDaReceita +=
+            quantidadeNormalizada * custoMedio;
+        });
+
+        if (completo) {
+          custoUnitarioTotal +=
+            custoDaReceita / receita.yield_quantity;
+        }
+      });
+
+      resultado[doce.id] = {
+        custoUnitario: completo
+          ? custoUnitarioTotal
+          : null,
+        semReceita: false,
+        custoIncompleto: !completo,
+      };
+    });
+
+    setCustosPorDoce(resultado);
   }
 
   async function carregarPagina() {
@@ -478,6 +765,10 @@ export default function CategoriaDocesPage() {
       );
 
     setDoces(
+      docesConvertidos
+    );
+
+    await carregarCustosDaCategoria(
       docesConvertidos
     );
 
@@ -813,43 +1104,95 @@ export default function CategoriaDocesPage() {
     await carregarPagina();
   }
 
-  function abrirEdicao(
-    doce: Doce
-  ) {
-    setMenuDoceId(
-      null
-    );
+async function abrirEdicao(
+  doce: Doce
+) {
+  setMenuDoceId(null);
+  setErro("");
+
+  /*
+   * Busca novamente o doce diretamente no banco.
+   *
+   * Isso evita usar um valor antigo que possa ter ficado
+   * no estado da categoria anterior.
+   */
+  const {
+    data: doceAtualizado,
+    error,
+  } = await supabase
+    .from("sweets")
+    .select(`
+      id,
+      category_id,
+      name,
+      quantity,
+      minimum_quantity,
+      sale_price,
+      is_customizable
+    `)
+    .eq("id", doce.id)
+    .eq("category_id", categoriaId)
+    .single();
+
+  if (error || !doceAtualizado) {
+    console.error(error);
 
     setErro(
-      ""
+      "Não foi possível carregar os dados atuais deste doce."
     );
 
-    setDoceEditando(
-      doce
-    );
-
-    setNomeDoceEditando(
-      doce.name
-    );
-
-    setPrecoDoceEditando(
-      Number(
-        doce.sale_price
-      )
-        .toFixed(2)
-        .replace(
-          ".",
-          ","
-        )
-    );
-
-    setEstoqueMinimoEditando(
-      String(
-        doce.minimum_quantity
-      )
-    );
+    return;
   }
 
+  const doceDoBanco: Doce = {
+    id: Number(doceAtualizado.id),
+
+    category_id:
+      Number(doceAtualizado.category_id),
+
+    name:
+      String(doceAtualizado.name),
+
+    quantity:
+      Number(doceAtualizado.quantity ?? 0),
+
+    minimum_quantity:
+      Number(
+        doceAtualizado.minimum_quantity ?? 0
+      ),
+
+    sale_price:
+      Number(doceAtualizado.sale_price ?? 0),
+
+    is_customizable:
+      Boolean(doceAtualizado.is_customizable),
+  };
+
+  setDoceEditando(
+    doceDoBanco
+  );
+
+  setNomeDoceEditando(
+    doceDoBanco.name
+  );
+
+  setPrecoDoceEditando(
+    Number(
+      doceDoBanco.sale_price
+    )
+      .toFixed(2)
+      .replace(
+        ".",
+        ","
+      )
+  );
+
+  setEstoqueMinimoEditando(
+    String(
+      doceDoBanco.minimum_quantity
+    )
+  );
+}
   function fecharEdicao() {
     setDoceEditando(
       null
@@ -1204,13 +1547,13 @@ export default function CategoriaDocesPage() {
 
           <div>
             <strong>
-              {docesNormais.length + criacoesPersonalizadas.length}
+              {docesNormais.length}
             </strong>
 
             <span>
-              {docesNormais.length + criacoesPersonalizadas.length === 1
-                ? "doce cadastrado"
-                : "doces cadastrados"}
+              {docesNormais.length === 1
+                ? "sabor"
+                : "sabores"}
             </span>
           </div>
 
@@ -1277,11 +1620,20 @@ export default function CategoriaDocesPage() {
         </button>
 
         <section
+          className="sweet-flavors-section"
           style={{
             marginTop:
               "24px",
           }}
         >
+
+          <div className="sweet-flavors-heading">
+            <div>
+              <span className="section-kicker">SABORES</span>
+              <h2>Escolha um sabor</h2>
+            </div>
+            <small>Toque em um sabor para ver estoque, receita e precificação.</small>
+          </div>
 
           {erro &&
             !mostrarNovoDoce &&
@@ -1323,6 +1675,25 @@ export default function CategoriaDocesPage() {
                       doce.minimum_quantity
                     );
 
+                  const custoInfo =
+                    custosPorDoce[doce.id];
+
+                  const custoUnitario =
+                    custoInfo?.custoUnitario ?? null;
+
+                  const margem =
+                    custoUnitario != null &&
+                    Number(doce.sale_price) > 0
+                      ? ((Number(doce.sale_price) - custoUnitario) /
+                          Number(doce.sale_price)) *
+                        100
+                      : null;
+
+                  const valorEstoque =
+                    custoUnitario != null
+                      ? custoUnitario * Number(doce.quantity || 0)
+                      : null;
+
                   return (
                     <div
                       key={
@@ -1336,47 +1707,96 @@ export default function CategoriaDocesPage() {
                         className="sweet-product-main"
                       >
 
-                        <div className="sweet-product-info">
+                        <div className="sweet-product-info sweet-product-info-financial">
 
-                          <strong>
+                          <strong className="sweet-product-name">
                             {doce.name}
                           </strong>
 
-                          <span className="sweet-product-price">
-                            {formatarPreco(
-                              doce.sale_price
+                          <div className="sweet-product-financial-grid">
+
+                            <div>
+                              <span>Venda</span>
+                              <strong>
+                                {formatarPreco(
+                                  doce.sale_price
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <span>Custo</span>
+                              <strong>
+                                {custoUnitario != null
+                                  ? formatarPreco(custoUnitario)
+                                  : "—"}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <span>Margem</span>
+                              <strong>
+                                {margem != null
+                                  ? `${margem.toLocaleString(
+                                      "pt-BR",
+                                      {
+                                        minimumFractionDigits: 1,
+                                        maximumFractionDigits: 1,
+                                      }
+                                    )}%`
+                                  : "—"}
+                              </strong>
+                            </div>
+
+                          </div>
+
+                          <div className="sweet-product-stock-line">
+                            <span>
+                              Estoque:{" "}
+                              <strong>
+                                {Number(
+                                  doce.quantity
+                                ).toLocaleString(
+                                  "pt-BR",
+                                  {
+                                    maximumFractionDigits: 0,
+                                  }
+                                )}{" "}
+                                un
+                              </strong>
+                            </span>
+
+                            {valorEstoque != null && (
+                              <small>
+                                Valor em estoque:{" "}
+                                <strong>
+                                  {formatarPreco(valorEstoque)}
+                                </strong>
+                              </small>
                             )}
-                          </span>
+                          </div>
 
-                          <span>
-                            Estoque:{" "}
-                            {Number(
-                              doce.quantity
-                            ).toLocaleString(
-                              "pt-BR",
-                              {
-                                maximumFractionDigits:
-                                  0,
-                              }
-                            )}{" "}
-                            un
-                          </span>
-
-                        </div>
-
-                        <div className="sweet-product-right">
-
-                          {estoqueBaixo && (
-                            <span className="sweet-stock-low">
-                              Estoque baixo
+                          {custoInfo?.semReceita && (
+                            <span className="sweet-product-cost-note">
+                              Cadastre a receita para calcular o custo
                             </span>
                           )}
 
-                          <span className="sweet-category-arrow">
-                            ›
-                          </span>
+                          {custoInfo?.custoIncompleto && (
+                            <span className="sweet-product-cost-note sweet-product-cost-note-warning">
+                              Custo pendente: falta histórico de compra ou há ingrediente incompatível
+                            </span>
+                          )}
 
                         </div>
+
+<div className="sweet-product-right">
+  {estoqueBaixo && (
+    <span className="sweet-stock-low">
+      Estoque baixo
+    </span>
+  )}
+</div>
 
                       </Link>
 
@@ -1431,6 +1851,12 @@ export default function CategoriaDocesPage() {
                     </div>
                   );
                 }
+              )}
+
+              {criacoesPersonalizadas.length > 0 && (
+                <div className="sweet-list-subsection-label">
+                  <span>PERSONALIZADOS CRIADOS</span>
+                </div>
               )}
 
               {criacoesPersonalizadas.map(

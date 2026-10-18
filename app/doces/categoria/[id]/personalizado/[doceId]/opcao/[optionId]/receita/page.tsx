@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  calcularCustosMediosPonderados,
+  normalizarQuantidadeParaBase,
+} from "@/lib/custos";
 
 type Categoria = {
   id: number;
@@ -57,6 +61,13 @@ type ReceitaItemBanco = {
     | null;
 };
 
+type CompraHistorica = {
+  inventory_item_id: number | null;
+  quantity: number;
+  unit: string;
+  total_price: number;
+};
+
 type ResultadoProducao = {
   batch_id?: number;
   produced_quantity?: number;
@@ -74,6 +85,25 @@ function numero(valor: string) {
 
 function formatarUnidade(unidade: string) {
   return unidade === "unidade" ? "un" : unidade;
+}
+
+function formatarPreco(valor: number) {
+  return Number(valor || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function formatarCustoMedio(valorBase: number, unidadeBase: string) {
+  if (unidadeBase === "g") {
+    return `${formatarPreco(valorBase * 1000)}/kg`;
+  }
+
+  if (unidadeBase === "ml") {
+    return `${formatarPreco(valorBase * 1000)}/L`;
+  }
+
+  return `${formatarPreco(valorBase)}/${formatarUnidade(unidadeBase)}`;
 }
 
 function unidadesPermitidas(unidadeBase: string) {
@@ -131,6 +161,9 @@ export default function ReceitaPage() {
     Record<number, IngredienteReceita[]>
   >({});
   const [estoque, setEstoque] = useState<EstoqueItem[]>([]);
+  const [custosMedios, setCustosMedios] = useState<Map<number, number>>(
+    new Map()
+  );
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -238,17 +271,49 @@ export default function ReceitaPage() {
       .select("id, name, unit")
       .order("name");
 
+    let estoqueConvertido: EstoqueItem[] = [];
+
     if (estoqueError) {
       console.error(estoqueError);
       setErro("Não foi possível carregar os ingredientes do estoque.");
+      setEstoque([]);
+      setCustosMedios(new Map());
     } else {
-      setEstoque(
-        (estoqueData ?? []).map((item) => ({
-          id: Number(item.id),
-          name: String(item.name),
+      estoqueConvertido = (estoqueData ?? []).map((item) => ({
+        id: Number(item.id),
+        name: String(item.name),
+        unit: String(item.unit),
+      }));
+
+      setEstoque(estoqueConvertido);
+
+      const { data: comprasData, error: comprasError } = await supabase
+        .from("purchase_items")
+        .select("inventory_item_id, quantity, unit, total_price")
+        .not("inventory_item_id", "is", null);
+
+      if (comprasError) {
+        console.error(comprasError);
+        setCustosMedios(new Map());
+      } else {
+        const unidadesBase = new Map<number, string>(
+          estoqueConvertido.map((item) => [item.id, item.unit])
+        );
+
+        const compras: CompraHistorica[] = (comprasData ?? []).map((item) => ({
+          inventory_item_id:
+            item.inventory_item_id == null
+              ? null
+              : Number(item.inventory_item_id),
+          quantity: Number(item.quantity ?? 0),
           unit: String(item.unit),
-        }))
-      );
+          total_price: Number(item.total_price ?? 0),
+        }));
+
+        setCustosMedios(
+          calcularCustosMediosPonderados(compras, unidadesBase)
+        );
+      }
     }
 
     const { data: receitasData, error: receitasError } = await supabase
@@ -349,6 +414,75 @@ export default function ReceitaPage() {
       })
       .slice(0, 8);
   }, [buscaIngrediente, estoque, ingredientes]);
+
+  function calcularCustoIngrediente(ingrediente: IngredienteReceita) {
+    const itemEstoque = estoque.find(
+      (item) => item.id === ingrediente.inventory_item_id
+    );
+
+    if (!itemEstoque) {
+      return { custo: null as number | null, custoMedioTexto: "Sem cadastro" };
+    }
+
+    const custoMedio = custosMedios.get(ingrediente.inventory_item_id);
+
+    if (custoMedio == null) {
+      return {
+        custo: null as number | null,
+        custoMedioTexto: "Sem histórico de compra",
+      };
+    }
+
+    const quantidadeNormalizada = normalizarQuantidadeParaBase(
+      Number(ingrediente.quantity),
+      ingrediente.unit,
+      itemEstoque.unit
+    );
+
+    if (quantidadeNormalizada == null) {
+      return {
+        custo: null as number | null,
+        custoMedioTexto: "Unidade incompatível",
+      };
+    }
+
+    return {
+      custo: quantidadeNormalizada * custoMedio,
+      custoMedioTexto: formatarCustoMedio(custoMedio, itemEstoque.unit),
+    };
+  }
+
+  function calcularResumoReceita(
+    receita: Receita,
+    itens: IngredienteReceita[]
+  ) {
+    let custoParcial = 0;
+    let pendentes = 0;
+
+    itens.forEach((ingrediente) => {
+      const resultado = calcularCustoIngrediente(ingrediente);
+
+      if (resultado.custo == null) {
+        pendentes += 1;
+        return;
+      }
+
+      custoParcial += resultado.custo;
+    });
+
+    const custoCompleto = itens.length > 0 && pendentes === 0;
+    const custoPorUnidade =
+      custoCompleto && receita.yield_quantity > 0
+        ? custoParcial / receita.yield_quantity
+        : null;
+
+    return {
+      custoParcial,
+      custoCompleto,
+      custoPorUnidade,
+      pendentes,
+    };
+  }
 
   function limparIngredienteSelecionado() {
     setIngredienteSelecionado(null);
@@ -760,6 +894,75 @@ export default function ReceitaPage() {
 
   return (
     <main className="compras-page">
+      <style jsx>{`
+        .sweet-option-recipe-v2-toolbar {
+          display: flex;
+          align-items: stretch;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 18px;
+        }
+
+        .sweet-option-recipe-v2-stock {
+          min-width: 150px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 2px;
+          padding: 10px 13px;
+          border: 1px solid #eadfd8;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.82);
+          box-shadow: 0 4px 12px rgba(104, 44, 17, 0.05);
+        }
+
+        .sweet-option-recipe-v2-stock span {
+          color: #8a756c;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .sweet-option-recipe-v2-stock strong {
+          color: var(--brown);
+          font-size: 17px;
+          font-weight: 900;
+        }
+
+        .sweet-option-recipe-v2-add {
+          width: auto;
+          min-width: 150px;
+          margin: 0;
+        }
+
+        .sweet-recipe-material-note {
+          margin-top: 8px;
+          padding: 9px 11px;
+          border-radius: 12px;
+          background: #fff8f2;
+          color: #846e64;
+          font-size: 12px;
+          line-height: 1.4;
+        }
+
+        @media (max-width: 560px) {
+          .sweet-option-recipe-v2-toolbar {
+            flex-direction: column;
+          }
+
+          .sweet-option-recipe-v2-stock,
+          .sweet-option-recipe-v2-add {
+            width: 100%;
+          }
+
+          .sweet-option-recipe-v2-stock {
+            min-height: 54px;
+          }
+
+          .sweet-recipe-material-note {
+            font-size: 11px;
+          }
+        }
+      `}</style>
       <div className="page-shell">
         <header className="page-header">
           <Link
@@ -770,28 +973,30 @@ export default function ReceitaPage() {
           </Link>
 
           <div>
-            <span className="page-kicker">RECEITA DA OPÇÃO</span>
+            <span className="page-kicker">RECEITA</span>
             <h1>{opcao.name}</h1>
-            <p>{grupo.name} • Cadastre ingredientes, rendimento e faça a produção.</p>
+            <p>{grupo.name} • Monte a receita, veja o custo dos ingredientes e faça a produção.</p>
           </div>
         </header>
 
-        <div className="sweet-option-stock-card">
-          <span>Quantidade pronta desta opção</span>
-          <strong>
-            {Number(opcao.quantity || 0).toLocaleString("pt-BR", {
-              maximumFractionDigits: 3,
-            })} un
-          </strong>
-        </div>
+        <div className="sweet-option-recipe-v2-toolbar">
+          <div className="sweet-option-recipe-v2-stock">
+            <span>Pronto em estoque</span>
+            <strong>
+              {Number(opcao.quantity || 0).toLocaleString("pt-BR", {
+                maximumFractionDigits: 3,
+              })} un
+            </strong>
+          </div>
 
-        <button
-          type="button"
-          className="inventory-add-button"
-          onClick={abrirNovaReceita}
-        >
-          + Nova receita
-        </button>
+          <button
+            type="button"
+            className="inventory-add-button sweet-option-recipe-v2-add"
+            onClick={abrirNovaReceita}
+          >
+            + Nova receita
+          </button>
+        </div>
 
         {mensagemSucesso && (
           <div className="sweet-production-success">
@@ -826,6 +1031,7 @@ export default function ReceitaPage() {
             <div className="sweet-recipe-list">
               {receitas.map((receita) => {
                 const itens = ingredientesPorReceita[receita.id] ?? [];
+                const resumoCusto = calcularResumoReceita(receita, itens);
 
                 return (
                   <article key={receita.id} className="sweet-recipe-card">
@@ -871,25 +1077,82 @@ export default function ReceitaPage() {
                         <p>Nenhum ingrediente cadastrado.</p>
                       ) : (
                         <div className="sweet-recipe-ingredient-list">
-                          {itens.map((ingrediente) => (
-                            <div
-                              key={ingrediente.inventory_item_id}
-                              className="sweet-recipe-ingredient-row"
-                            >
-                              <strong>{ingrediente.name}</strong>
+                          {itens.map((ingrediente) => {
+                            const custoIngrediente =
+                              calcularCustoIngrediente(ingrediente);
 
-                              <span>
-                                {Number(ingrediente.quantity).toLocaleString(
-                                  "pt-BR",
-                                  { maximumFractionDigits: 3 }
-                                )}{" "}
-                                {formatarUnidade(ingrediente.unit)}
-                              </span>
-                            </div>
-                          ))}
+                            return (
+                              <div
+                                key={ingrediente.inventory_item_id}
+                                className="sweet-recipe-ingredient-row sweet-recipe-cost-row"
+                              >
+                                <div className="sweet-recipe-cost-main">
+                                  <strong>{ingrediente.name}</strong>
+                                  <span>
+                                    {Number(ingrediente.quantity).toLocaleString(
+                                      "pt-BR",
+                                      { maximumFractionDigits: 3 }
+                                    )}{" "}
+                                    {formatarUnidade(ingrediente.unit)}
+                                  </span>
+                                </div>
+
+                                <div className="sweet-recipe-cost-values">
+                                  <small>
+                                    Custo médio: {custoIngrediente.custoMedioTexto}
+                                  </small>
+
+                                  {custoIngrediente.custo == null ? (
+                                    <strong className="sweet-recipe-cost-missing">
+                                      Custo não calculado
+                                    </strong>
+                                  ) : (
+                                    <strong>
+                                      {formatarPreco(custoIngrediente.custo)}
+                                    </strong>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
+
+                    <div className="sweet-recipe-cost-summary">
+                      <div>
+                        <span>
+                          {resumoCusto.custoCompleto
+                            ? "Matéria-prima da receita"
+                            : "Matéria-prima parcial"}
+                        </span>
+                        <strong>{formatarPreco(resumoCusto.custoParcial)}</strong>
+                      </div>
+
+                      <div>
+                        <span>Matéria-prima por unidade</span>
+                        <strong>
+                          {resumoCusto.custoPorUnidade == null
+                            ? "—"
+                            : formatarPreco(resumoCusto.custoPorUnidade)}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="sweet-recipe-material-note">
+                      Este valor considera somente os ingredientes da receita.
+                    </div>
+
+                    {resumoCusto.pendentes > 0 && (
+                      <div className="sweet-recipe-cost-warning">
+                        <strong>⚠ Custo incompleto</strong>
+                        <span>
+                          {resumoCusto.pendentes === 1
+                            ? "1 ingrediente está sem custo calculado."
+                            : `${resumoCusto.pendentes} ingredientes estão sem custo calculado.`}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="sweet-recipe-card-actions">
                       <button
@@ -1091,7 +1354,7 @@ export default function ReceitaPage() {
                       className="sweet-recipe-add-ingredient-button"
                       onClick={adicionarIngrediente}
                     >
-                      + Adicionar
+                      + Adicionar ingrediente
                     </button>
                   </div>
                 </>
@@ -1148,7 +1411,7 @@ export default function ReceitaPage() {
                     ? "Salvando..."
                     : receitaEditando
                       ? "Salvar alterações"
-                      : "Cadastrar receita"}
+                      : "Salvar receita"}
                 </button>
               </div>
             </div>
